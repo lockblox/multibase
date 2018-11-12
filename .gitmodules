@@ -1,0 +1,3 @@
+[submodule "3rdparty/gate"]
+	path = 3rdparty/gate
+	url = https://github.com/hunter-packages/gate.git
