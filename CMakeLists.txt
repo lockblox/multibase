@@ -22,4 +22,5 @@ set_target_properties(libmultibase PROPERTIES OUTPUT_NAME multibase)
 add_executable(multibase multibase/main.cpp)
 target_link_libraries(multibase libmultibase)
 
+enable_testing()
 add_subdirectory(test)
