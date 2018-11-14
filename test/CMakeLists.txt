@@ -1,5 +1,3 @@
-enable_testing()
-
 # Compile and run all unit tests
 hunter_add_package(GTest)
 find_package(GTest CONFIG REQUIRED)
