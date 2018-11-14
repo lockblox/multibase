@@ -22,7 +22,7 @@ TEST(Multibase, encoding) {
 
 TEST(Multibase, decoding) {
   {
-    auto expected = std::vector<unsigned char>{0, 1, 2, 4, 8, 16, 127};
+    auto expected = std::string{0, 1, 2, 4, 8, 16, 127};
     auto input("0001020408107f");
     auto result(multibase::base<multibase::BASE_16>::decode(input));
     EXPECT_EQ(expected, result);
