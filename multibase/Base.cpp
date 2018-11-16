@@ -7,6 +7,6 @@ std::array<codec, 256>& codecs() {
   return codecs_;
 }
 
-base<BASE_16> base16;
+base<base_16> base16;
 
 }  // namespace multibase

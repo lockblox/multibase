@@ -5,11 +5,11 @@
 
 int main(void) {
   std::cout << "Radix: "
-            << multibase::base_traits<multibase::BASE_16>::charset.size()
+            << multibase::base_traits<multibase::base_16>::charset.size()
             << std::endl;
   auto charset =
-      std::string(multibase::base_traits<multibase::BASE_16>::charset.begin(),
-                  multibase::base_traits<multibase::BASE_16>::charset.end());
+      std::string(multibase::base_traits<multibase::base_16>::charset.begin(),
+                  multibase::base_traits<multibase::base_16>::charset.end());
 
   std::cout << "Charset: " << charset << std::endl;
   auto input = std::vector<unsigned char>{1, 2, 4, 8, 16, 127};
@@ -25,9 +25,9 @@ int main(void) {
   auto input_view =
       std::string_view(reinterpret_cast<char*>(input.data()), input.size());
 
-  auto encoded = multibase::base<multibase::BASE_16>::encode(input_view);
+  auto encoded = multibase::base<multibase::base_16>::encode(input_view);
   std::cout << "Encoded: " << encoded << std::endl;
-  auto decoded = multibase::base<multibase::BASE_16>::decode(encoded);
+  auto decoded = multibase::base<multibase::base_16>::decode(encoded);
   std::cout << "Decoded: ";
   for (auto o : decoded) {
     std::cout << std::hex << (int)(o) << ",";
