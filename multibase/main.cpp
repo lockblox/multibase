@@ -1,15 +1,14 @@
-#include <multibase/Base.h>
+#include <multibase/base.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 
 int main(void) {
-  std::cout << "Radix: "
-            << multibase::base_traits<multibase::base_16>::charset.size()
+  static constexpr auto encoding = multibase::encoding::base_16;
+  std::cout << "Radix: " << multibase::traits<encoding>::charset.size()
             << std::endl;
-  auto charset =
-      std::string(multibase::base_traits<multibase::base_16>::charset.begin(),
-                  multibase::base_traits<multibase::base_16>::charset.end());
+  auto charset = std::string(multibase::traits<encoding>::charset.begin(),
+                             multibase::traits<encoding>::charset.end());
 
   std::cout << "Charset: " << charset << std::endl;
   auto input = std::vector<unsigned char>{1, 2, 4, 8, 16, 127};
@@ -25,9 +24,10 @@ int main(void) {
   auto input_view =
       std::string_view(reinterpret_cast<char*>(input.data()), input.size());
 
-  auto encoded = multibase::base<multibase::base_16>::encode(input_view);
+  auto codec = multibase::basic_codec<encoding>{};
+  auto encoded = codec.encode(input_view);
   std::cout << "Encoded: " << encoded << std::endl;
-  auto decoded = multibase::base<multibase::base_16>::decode(encoded);
+  auto decoded = codec.decode(encoded);
   std::cout << "Decoded: ";
   for (auto o : decoded) {
     std::cout << std::hex << (int)(o) << ",";
