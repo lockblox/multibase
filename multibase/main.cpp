@@ -1,4 +1,5 @@
-#include <multibase/base.h>
+#include <multibase/multibase.h>
+#include <multibase/basic_codec.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -25,7 +26,7 @@ int main(void) {
       std::string_view(reinterpret_cast<char*>(input.data()), input.size());
 
   auto codec = multibase::basic_codec<encoding>{};
-  auto encoded = codec.encode(input_view);
+  auto encoded = codec.encode(input_view, false);
   std::cout << "Encoded: " << encoded << std::endl;
   auto decoded = codec.decode(encoded);
   std::cout << "Decoded: ";

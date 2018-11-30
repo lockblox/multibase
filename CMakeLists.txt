@@ -14,8 +14,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 
 add_library(libmultibase
-        multibase/Base.h
-        multibase/Base.cpp)
+        multibase/multibase.cpp
+        multibase/multibase.h
+        multibase/basic_codec.cpp
+        multibase/basic_codec.h
+        multibase/codec.cpp
+        multibase/codec.h
+        multibase/encoding.cpp
+        multibase/encoding.h multibase/codec_impl.cpp multibase/codec_impl.h)
 target_include_directories(libmultibase PUBLIC "${multibase_SOURCE_DIR}")
 set_target_properties(libmultibase PROPERTIES OUTPUT_NAME multibase)
 

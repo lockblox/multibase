@@ -36,3 +36,6 @@
 .vs
 build
 cmake-build-debug
+
+# Editor files
+*.swp
