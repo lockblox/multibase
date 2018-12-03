@@ -1,3 +1,4 @@
+#include "codec_impl.h"
 #include <multibase/basic_codec.h>
 #include <multibase/codec_impl.h>
 
@@ -60,6 +61,8 @@ std::string codec::impl::decode(const std::string_view& input) {
   decode(input, view);
   return output;
 }
+
+encoding codec::impl::base() { return get_encoding(); }
 
 codec::impl::registry::data_type& codec::impl::registry::data() {
   static data_type data_ =

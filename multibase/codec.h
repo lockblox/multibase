@@ -11,6 +11,8 @@ class codec {
  public:
   explicit codec(encoding base);
 
+  encoding base() const;
+
   std::string encode(const std::string_view& input,
                      bool include_encoding = true);
 
@@ -33,7 +35,7 @@ class codec {
   class impl;
 
  private:
-  impl* pimpl;
+  impl* pImpl;
 };
 
 }  // namespace multibase

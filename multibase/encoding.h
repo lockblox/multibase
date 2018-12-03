@@ -5,7 +5,7 @@ namespace multibase {
 using encoding_t = unsigned char;
 
 enum class encoding : encoding_t {
-  base_invalid = 0,
+  base_unknown = 0,
   base_16 = 102,
   base_16_upper = 70,
   base_32 = 98,

@@ -7,6 +7,7 @@ namespace multibase {
 
 class codec::impl {
  public:
+  encoding base();
   /** Encode to the input, optionally including the encoding type in the output
    */
   std::string encode(const std::string_view& input, bool include_encoding);
