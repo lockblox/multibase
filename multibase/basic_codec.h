@@ -3,6 +3,9 @@
 #include <multibase/codec_impl.h>
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <cmath>
+#include <vector>
 
 namespace multibase {
 
@@ -45,14 +48,14 @@ class basic_codec : public codec::impl {
   @return character encoding, or 0 if none such encoding exists */
   constexpr static unsigned char getval(unsigned char p) noexcept {
     return find(first, last, p) == last
-               ? static_cast<unsigned char>(0)
+               ? static_cast<unsigned char>(255)
                : static_cast<unsigned char>(
                      std::distance(first, find(first, last, p)));
   }
 
   /** Compute base-2 logarithm */
-  constexpr static std::size_t log2(std::size_t n) noexcept {
-    return ((n == 1) ? 0 : ((n < 2) ? 1 : 1 + log2(n / 2)));
+  constexpr static float log2(float n) noexcept {
+    return (n == 1) ? 0 : ((n < 2) ? 1 : 1 + log2(n / 2));
   }
 
   /** encoding as determined by size of character set */
@@ -61,7 +64,6 @@ class basic_codec : public codec::impl {
   constexpr static auto ratio = log2(256) / log2(radix);
   /** Map from value to corresponding character in base encoding */
   static const std::array<unsigned char, 256> valset;
-
 };
 
 template <encoding T, typename Traits>
@@ -127,47 +129,91 @@ encoding basic_codec<T, Traits>::get_encoding() {
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::get_encoded_size(
     const std::string_view& input) {
-  return input.size() * ratio;
+  return static_cast<std::size_t>(std::ceil(input.size() * ratio)) + 1;
 }
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::encode(const std::string_view& input,
                                            std::string_view& output) {
-  if (output.size() < get_encoded_size(input)) return 0;
-  auto it = const_cast<char*>(&output[0]);
-  for (unsigned char c : input) {
-    auto first = it;
-    if (c == 0) *it++ = Traits::charset[c];
-    while (c != 0) {
-      *it++ = Traits::charset[c % radix];
-      c /= radix;
-    }
-    while (std::distance(first, it) < ratio) *it++ = '0';  // zero-pad
-    std::reverse(first, it);
+  auto pbegin = input.begin();
+  auto pend = input.end();
+  int zeroes = 0;
+  int length = 0;
+  while (pbegin != pend && *pbegin == 0) {
+    pbegin++;
+    zeroes++;
   }
-  return std::size_t(std::distance(const_cast<char*>(&output[0]), it));
+  auto size = get_encoded_size(input);
+  std::vector<unsigned char> result(size);
+  while (pbegin != pend) {
+    int carry = *reinterpret_cast<const unsigned char*>(pbegin);
+    int i = 0;
+    output.size();
+    for (std::vector<unsigned char>::reverse_iterator it = result.rbegin();
+         (carry != 0 || i < length) && (it != result.rend()); it++, i++) {
+      carry += 256 * (*it);
+      *it = carry % radix;
+      carry /= radix;
+    }
+    assert(carry == 0);
+    length = i;
+    pbegin++;
+  }
+  std::vector<unsigned char>::iterator it = result.begin() + (size - length);
+  while (it != result.end() && *it == 0) it++;
+  std::string str;
+  str.reserve(zeroes + (result.end() - it));
+  str.assign(zeroes, Traits::charset[0]);
+  while (it != result.end()) str += Traits::charset[*(it++)];
+  std::copy(str.begin(), str.end(), const_cast<char*>(&output[0]));
+  return str.size();
 }
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::get_decoded_size(
     const std::string_view& input) {
-  return input.size() / ratio;
+  return std::size_t(std::ceil(input.size() / ratio)) + 1;
 }
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::decode(const std::string_view& input,
                                            std::string_view& output) {
-  if (output.size() < decoded_size(input)) return 0;
-  auto it = input.rbegin();
-  for (auto& c : output) {
-    for (std::size_t n = ratio, p = 1; n > 0; p *= radix, --n) {
-      auto o = const_cast<char*>(&c);
-      *o += valset[*it++] * p;
-    }
+  auto psz = input.begin();
+  while (*psz && std::isspace(*psz)) psz++;
+  int zeroes = 0;
+  int length = 0;
+  while (*psz == Traits::charset[0]) {
+    zeroes++;
+    psz++;
   }
-  std::reverse(const_cast<char*>(&output[0]),
-               const_cast<char*>(&output[0] + output.size()));
-  return output.size();
+  auto size = get_decoded_size(input);
+  std::vector<unsigned char> result(size);
+  while (*psz && !std::isspace(*psz)) {
+    int carry = valset[(uint8_t)*psz];
+    if (carry == -1)
+      return 0;
+    int i = 0;
+    for (std::vector<unsigned char>::reverse_iterator it = result.rbegin();
+         (carry != 0 || i < length) && (it != result.rend()); ++it, ++i) {
+      carry += radix * (*it);
+      *it = carry % 256;
+      carry /= 256;
+    }
+    assert(carry == 0);
+    length = i;
+    psz++;
+  }
+  while (std::isspace(*psz)) psz++;
+  if (*psz != 0) return 0;
+  // Skip leading zeroes in result.
+  std::vector<unsigned char>::iterator it = result.begin() + (size - length);
+  while (it != result.end() && *it == 0) it++;
+  std::fill(const_cast<char*>(&output[0]), const_cast<char*>(&output[zeroes]),
+            0x00);
+  std::size_t output_size = zeroes + std::distance(it, result.end());
+  auto oit = const_cast<char*>(&output[zeroes]);
+  std::copy(it, result.end(), oit);
+  return output_size;
 }
 
 template <>
@@ -177,7 +223,17 @@ struct traits<encoding::base_16> {
       '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
   constexpr static const char name[] = "base_16";
 };
+using base_16 = basic_codec<encoding::base_16>;
 
-using base16 = basic_codec<encoding::base_16>;
+template <>
+struct traits<encoding::base_58_btc> {
+  constexpr static const std::array<char, 58> charset = {
+      '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+      'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
+      'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm',
+      'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+  constexpr static const char name[] = "base_58_btc";
+};
+using base_58_btc = basic_codec<encoding::base_58_btc>;
 
 }  // namespace multibase

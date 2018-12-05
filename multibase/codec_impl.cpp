@@ -30,7 +30,9 @@ std::string codec::impl::encode(const std::string_view& input,
                                 bool include_encoding) {
   auto result = std::string(encoded_size(input, include_encoding), 0);
   auto output = std::string_view(result);
-  encode(input, output, include_encoding);
+  auto size = encode(input, output, include_encoding);
+  size += include_encoding ? 1 : 0;
+  result.resize(size);
   return result;
 }
 
@@ -58,7 +60,7 @@ std::string codec::impl::decode(const std::string_view& input) {
   auto size = decoded_size(input);
   auto output = std::string(size, 0);
   auto view = std::string_view(output);
-  decode(input, view);
+  output.resize(decode(input, view));
   return output;
 }
 
@@ -66,7 +68,7 @@ encoding codec::impl::base() { return get_encoding(); }
 
 codec::impl::registry::data_type& codec::impl::registry::data() {
   static data_type data_ =
-      data_type{{encoding::base_16, std::make_unique<base16>()}};
+      data_type{{encoding::base_16, std::make_unique<base_16>()}};
   return data_;
 }
 

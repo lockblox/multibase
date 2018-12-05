@@ -19,7 +19,10 @@ std::size_t encoded_size(const std::string_view& input, encoding base,
 }
 
 std::string decode(const std::string_view& input, encoding base) {
-  return codec(multibase::base(input, base)).decode(input);
+  assert(input.size() > 0);
+  auto decoder = codec(multibase::base(input, base));
+  auto view = std::string_view(&input[0] + 1, input.size() - 1);
+  return decoder.decode(view);
 }
 
 std::size_t decode(const std::string_view& input, std::string_view& output,
