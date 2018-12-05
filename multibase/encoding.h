@@ -6,12 +6,12 @@ using encoding_t = unsigned char;
 
 enum class encoding : encoding_t {
   base_unknown = 0,
-  base_16 = 102,
-  base_16_upper = 70,
-  base_32 = 98,
-  base_32_upper = 66,
-  base_58_btc = 122,
-  base_64 = 109
+  base_16 = 'f',
+  base_16_upper = 'F',
+  base_32 = 'b',
+  base_32_upper = 'B',
+  base_58_btc = 'Z',
+  base_64 = 'm'
 };
 
 }  // namespace multibase
