@@ -135,38 +135,30 @@ std::size_t basic_codec<T, Traits>::get_encoded_size(
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::encode(const std::string_view& input,
                                            std::string_view& output) {
-  auto pbegin = input.begin();
-  auto pend = input.end();
-  int zeroes = 0;
+  auto ii = std::find_if(std::begin(input), std::end(input),
+                         [](auto c) { return c != 0; });
+  auto zeroes = std::distance(std::begin(input), ii);
   int length = 0;
-  while (pbegin != pend && *pbegin == 0) {
-    pbegin++;
-    zeroes++;
-  }
-  auto size = get_encoded_size(input);
-  std::vector<unsigned char> result(size);
-  while (pbegin != pend) {
-    int carry = *reinterpret_cast<const unsigned char*>(pbegin);
+  for (auto end = std::end(input); ii != end; ++ii) {
+    int carry = *reinterpret_cast<const unsigned char*>(ii);
     int i = 0;
-    output.size();
-    for (std::vector<unsigned char>::reverse_iterator it = result.rbegin();
-         (carry != 0 || i < length) && (it != result.rend()); it++, i++) {
-      carry += 256 * (*it);
-      *it = carry % radix;
+    for (auto oi = output.rbegin();
+         (oi != output.rend()) && (carry != 0 || i < length); ++oi, ++i) {
+      carry += 256 * (*oi);
+      auto byte = (unsigned char*)(&(*oi));
+      *byte = carry % radix;
       carry /= radix;
     }
     assert(carry == 0);
     length = i;
-    pbegin++;
   }
-  std::vector<unsigned char>::iterator it = result.begin() + (size - length);
-  while (it != result.end() && *it == 0) it++;
-  std::string str;
-  str.reserve(zeroes + (result.end() - it));
-  str.assign(zeroes, Traits::charset[0]);
-  while (it != result.end()) str += Traits::charset[*(it++)];
-  std::copy(str.begin(), str.end(), const_cast<char*>(&output[0]));
-  return str.size();
+  auto it = std::find_if(output.begin() + (output.size() - length),
+                         output.end(), [](auto c) { return c != 0; });
+  auto size = std::distance(it, output.end()) + zeroes;
+  std::fill_n((unsigned char*)(output.begin()), zeroes, Traits::charset[0]);
+  std::transform(it, output.end(), (unsigned char*)(&output[zeroes]),
+                 [](auto c) { return Traits::charset[c]; });
+  return size;
 }
 
 template <encoding T, typename Traits>
@@ -190,8 +182,7 @@ std::size_t basic_codec<T, Traits>::decode(const std::string_view& input,
   std::vector<unsigned char> result(size);
   while (*psz && !std::isspace(*psz)) {
     int carry = valset[(uint8_t)*psz];
-    if (carry == -1)
-      return 0;
+    if (carry == -1) return 0;
     int i = 0;
     for (std::vector<unsigned char>::reverse_iterator it = result.rbegin();
          (carry != 0 || i < length) && (it != result.rend()); ++it, ++i) {
