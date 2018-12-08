@@ -45,8 +45,8 @@ TEST(Multibase, RuntimeEncoding) {
 }
 
 TEST(Multibase, RuntimeDecoding) {
-  auto expected = std::string{0, 1, 2, 4, 8, 16, 127, -13};
-  auto input = std::string("01020408107ff3");
+auto expected = std::string{0, 0, 0, 0, 0, 0, 1, 2, 4, 8, 16, 127, -13};
+auto input = std::string("0000001020408107ff3");
   auto encoding = multibase::encoding::base_16;
   auto result = multibase::codec(encoding).decode(input);
   EXPECT_EQ(expected, result);

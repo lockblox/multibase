@@ -129,14 +129,15 @@ encoding basic_codec<T, Traits>::get_encoding() {
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::get_encoded_size(
     const std::string_view& input) {
-  return static_cast<std::size_t>(std::ceil(input.size() * ratio)) + 1;
+  return static_cast<std::size_t>(std::ceil(input.size() * ratio) + 1);
 }
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::encode(const std::string_view& input,
                                            std::string_view& output) {
-  auto ii = std::find_if(std::begin(input), std::end(input),
-                         [](auto c) { return c != 0; });
+  assert(output.size() >= get_encoded_size(input));
+  auto not_zero = [](auto c) { return c != 0; };
+  auto ii = std::find_if(std::begin(input), std::end(input), not_zero);
   auto zeroes = std::distance(std::begin(input), ii);
   int length = 0;
   for (auto end = std::end(input); ii != end; ++ii) {
@@ -158,53 +159,47 @@ std::size_t basic_codec<T, Traits>::encode(const std::string_view& input,
   std::fill_n((unsigned char*)(output.begin()), zeroes, Traits::charset[0]);
   std::transform(it, output.end(), (unsigned char*)(&output[zeroes]),
                  [](auto c) { return Traits::charset[c]; });
-  return size;
+  return static_cast<size_t>(size);
 }
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::get_decoded_size(
     const std::string_view& input) {
-  return std::size_t(std::ceil(input.size() / ratio)) + 1;
+  auto not_zero = [](auto c) { return c != Traits::charset[0]; };
+  auto begin = input.begin(), end = input.end();
+  auto zeroes = std::distance(begin, std::find_if(begin, end, not_zero));
+  return std::size_t(std::ceil((input.size() - zeroes) / ratio) + zeroes);
 }
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::decode(const std::string_view& input,
                                            std::string_view& output) {
-  auto psz = input.begin();
-  while (*psz && std::isspace(*psz)) psz++;
-  int zeroes = 0;
-  int length = 0;
-  while (*psz == Traits::charset[0]) {
-    zeroes++;
-    psz++;
-  }
-  auto size = get_decoded_size(input);
-  std::vector<unsigned char> result(size);
-  while (*psz && !std::isspace(*psz)) {
-    int carry = valset[(uint8_t)*psz];
+  assert(output.size() >= get_decoded_size(input));
+  auto not_zero = [](auto c) { return c != Traits::charset[0]; };
+  auto ii = std::find_if(input.begin(), input.end(), not_zero);
+  auto zeroes = std::distance(input.begin(), ii);
+  auto length = 0;
+  for (auto end = input.end(); ii != end && *ii; ++ii) {
+    int carry = valset[(unsigned char)(*ii)];
     if (carry == -1) return 0;
     int i = 0;
-    for (std::vector<unsigned char>::reverse_iterator it = result.rbegin();
-         (carry != 0 || i < length) && (it != result.rend()); ++it, ++i) {
-      carry += radix * (*it);
-      *it = carry % 256;
+    for (auto oi = output.rbegin();
+         (carry != 0 || i < length) && (oi != output.rend()); ++oi, ++i) {
+      auto byte = (unsigned char*)(&(*oi));
+      carry += radix * (*byte);
+      *byte = static_cast<unsigned char>(carry % 256);
       carry /= 256;
     }
     assert(carry == 0);
     length = i;
-    psz++;
   }
-  while (std::isspace(*psz)) psz++;
-  if (*psz != 0) return 0;
-  // Skip leading zeroes in result.
-  std::vector<unsigned char>::iterator it = result.begin() + (size - length);
-  while (it != result.end() && *it == 0) it++;
-  std::fill(const_cast<char*>(&output[0]), const_cast<char*>(&output[zeroes]),
-            0x00);
-  std::size_t output_size = zeroes + std::distance(it, result.end());
+  auto it = std::find_if(output.begin() + (output.size() - length),
+                         output.end(), not_zero);
+  auto output_size = zeroes + std::distance(it, output.end());
   auto oit = const_cast<char*>(&output[zeroes]);
-  std::copy(it, result.end(), oit);
-  return output_size;
+  std::copy(it, output.end(), oit);
+  std::fill_n(const_cast<char*>(&output[0]), zeroes, 0);
+  return static_cast<size_t>(output_size);
 }
 
 template <>
