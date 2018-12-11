@@ -3,38 +3,38 @@
 
 namespace multibase {
 
-std::string encode(const std::string_view& input, encoding base,
+std::string encode(const cstring_span& input, encoding base,
                    bool include_encoding) {
   return codec(base).encode(input, include_encoding);
 }
 
-std::size_t encode(const std::string_view& input, std::string_view& output,
+std::size_t encode(const cstring_span& input, string_span& output,
                    encoding base, bool include_encoding) {
   return codec(base).encode(input, output, include_encoding);
 }
 
-std::size_t encoded_size(const std::string_view& input, encoding base,
+std::size_t encoded_size(const cstring_span& input, encoding base,
                          bool include_encoding) {
   return codec(base).encoded_size(input, include_encoding);
 }
 
-std::string decode(const std::string_view& input, encoding base) {
+std::string decode(const cstring_span& input, encoding base) {
   assert(input.size() > 0);
   auto decoder = codec(multibase::base(input, base));
-  auto view = std::string_view(&input[0] + 1, input.size() - 1);
+  auto view = cstring_span(&input[0] + 1, input.size() - 1);
   return decoder.decode(view);
 }
 
-std::size_t decode(const std::string_view& input, std::string_view& output,
+std::size_t decode(const cstring_span& input, string_span& output,
                    encoding base) {
   return codec(multibase::base(input, base)).decode(input, output);
 }
 
-std::size_t decoded_size(const std::string_view& input, encoding base) {
+std::size_t decoded_size(const cstring_span& input, encoding base) {
   return codec(multibase::base(input, base)).decoded_size(input);
 }
 
-encoding base(const std::string_view& input, encoding base) {
+encoding base(const cstring_span& input, encoding base) {
   return base == encoding::base_unknown ? static_cast<encoding>(input[0])
                                         : base;
 }

@@ -23,7 +23,7 @@ int main(void) {
             << std::string(input.begin(), input.end()) << std::endl;
 
   auto input_view =
-      std::string_view(reinterpret_cast<char*>(input.data()), input.size());
+      cstring_span(reinterpret_cast<char*>(input.data()), input.size());
 
   auto codec = multibase::basic_codec<encoding>{};
   auto encoded = codec.encode(input_view, false);

@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.1)
 
 include("3rdparty/gate/cmake/HunterGate.cmake")
-HunterGate(URL "https://github.com/ruslo/hunter/archive/v0.21.16.tar.gz"
-           SHA1 "aa1faccd24f33dd2c368f85a4e9ca2e5d9c249cb"
+HunterGate(
+        URL "https://github.com/ruslo/hunter/archive/v0.23.68.tar.gz"
+        SHA1 "d7365dfaf3db5c0939f3c62141a2ec1eac660962"
 )
 
 project(multibase LANGUAGES CXX)
+
+hunter_add_package(Microsoft.GSL)
+find_package(Microsoft.GSL CONFIG REQUIRED)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
@@ -24,6 +28,7 @@ add_library(libmultibase
         multibase/encoding.h multibase/codec_impl.cpp multibase/codec_impl.h)
 target_include_directories(libmultibase PUBLIC "${multibase_SOURCE_DIR}")
 set_target_properties(libmultibase PROPERTIES OUTPUT_NAME multibase)
+target_link_libraries(libmultibase PUBLIC Microsoft.GSL::GSL)
 
 add_executable(multibase multibase/main.cpp)
 target_link_libraries(multibase libmultibase)

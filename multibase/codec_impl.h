@@ -1,7 +1,6 @@
 #pragma once
 #include <multibase/codec.h>
 #include <map>
-#include "codec.h"
 
 namespace multibase {
 
@@ -10,28 +9,28 @@ class codec::impl {
   encoding base();
   /** Encode to the input, optionally including the encoding type in the output
    */
-  std::string encode(const std::string_view& input, bool include_encoding);
+  std::string encode(const cstring_span& input, bool include_encoding);
 
-  std::string encode(const std::string_view& input);
+  std::string encode(const cstring_span& input);
 
   /** Encode the input, writing the result to the user-supplied buffer,
    * optionally including the encoding type in the output
    * @return Number of bytes written */
-  std::size_t encode(const std::string_view& input, std::string_view& output,
+  std::size_t encode(const cstring_span& input, string_span& output,
                      bool include_encoding);
 
-  virtual std::size_t encode(const std::string_view& input,
-                             std::string_view& output) = 0;
+  virtual std::size_t encode(const cstring_span& input,
+      string_span& output) = 0;
 
-  std::size_t encoded_size(const std::string_view& input,
+  std::size_t encoded_size(const cstring_span& input,
                            bool include_encoding);
 
-  std::string decode(const std::string_view& input);
+  std::string decode(const cstring_span& input);
 
-  virtual std::size_t decode(const std::string_view& input,
-                             std::string_view& output) = 0;
+  virtual std::size_t decode(const cstring_span& input,
+      string_span& output) = 0;
 
-  std::size_t decoded_size(const std::string_view& input);
+  std::size_t decoded_size(const cstring_span& input);
 
   /** Registry of codec implementations */
   class registry {
@@ -49,12 +48,12 @@ class codec::impl {
 
  protected:
   virtual encoding get_encoding() = 0;
-  virtual std::size_t get_encoded_size(const std::string_view& input) = 0;
-  virtual std::size_t get_decoded_size(const std::string_view& input) = 0;
+  virtual std::size_t get_encoded_size(const cstring_span& input) = 0;
+  virtual std::size_t get_decoded_size(const cstring_span& input) = 0;
 
  private:
   std::size_t encoding_size(bool include_encoding);
-  std::size_t write_encoding(std::string_view& output, bool include_encoding);
+  std::size_t write_encoding(string_span& output, bool include_encoding);
 };
 
 }  // namespace multibase

@@ -11,31 +11,31 @@ codec::codec(encoding base) : pImpl(codec::impl::registry()[base].get()) {
                             std::to_string(static_cast<int>(base)));
 }
 
-std::string codec::encode(const std::string_view& input,
+std::string codec::encode(const cstring_span& input,
                           bool include_encoding) {
   return pImpl->encode(input, include_encoding);
 }
 
-std::size_t codec::encode(const std::string_view& input,
-                          std::string_view& output, bool include_encoding) {
+std::size_t codec::encode(const cstring_span& input,
+    string_span& output, bool include_encoding) {
   return pImpl->encode(input, output, include_encoding);
 }
 
-std::size_t codec::encoded_size(const std::string_view& input,
+std::size_t codec::encoded_size(const cstring_span& input,
                                 bool include_encoding) {
   return pImpl->encoded_size(input, include_encoding);
 }
 
-std::string codec::decode(const std::string_view& input) {
+std::string codec::decode(const cstring_span& input) {
   return pImpl->decode(input);
 }
 
-std::size_t codec::decode(const std::string_view& input,
-                          std::string_view& output) {
+std::size_t codec::decode(const cstring_span& input,
+    string_span& output) {
   return pImpl->decode(input, output);
 }
 
-std::size_t codec::decoded_size(const std::string_view& input) {
+std::size_t codec::decoded_size(const cstring_span& input) {
   return pImpl->decoded_size(input);
 }
 
