@@ -20,15 +20,14 @@ class codec::impl {
                      bool include_encoding);
 
   virtual std::size_t encode(const cstring_span& input,
-      string_span& output) = 0;
+                             string_span& output) = 0;
 
-  std::size_t encoded_size(const cstring_span& input,
-                           bool include_encoding);
+  std::size_t encoded_size(const cstring_span& input, bool include_encoding);
 
   std::string decode(const cstring_span& input);
 
   virtual std::size_t decode(const cstring_span& input,
-      string_span& output) = 0;
+                             string_span& output) = 0;
 
   std::size_t decoded_size(const cstring_span& input);
 

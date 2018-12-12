@@ -25,11 +25,9 @@ class basic_codec : public codec::impl {
   using codec::impl::encode;
   encoding get_encoding() override;
   std::size_t get_encoded_size(const cstring_span& input) override;
-  std::size_t encode(const cstring_span& input,
-      string_span& output) override;
+  std::size_t encode(const cstring_span& input, string_span& output) override;
   std::size_t get_decoded_size(const cstring_span& input) override;
-  std::size_t decode(const cstring_span& input,
-      string_span& output) override;
+  std::size_t decode(const cstring_span& input, string_span& output) override;
 
  private:
   constexpr static auto first = Traits::charset.cbegin();
@@ -134,7 +132,7 @@ std::size_t basic_codec<T, Traits>::get_encoded_size(
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::encode(const cstring_span& input,
-    string_span& output) {
+                                           string_span& output) {
   assert(output.size() >= get_encoded_size(input));
   auto not_zero = [](auto c) { return c != 0; };
   auto ii = std::find_if(std::begin(input), std::end(input), not_zero);
@@ -173,7 +171,7 @@ std::size_t basic_codec<T, Traits>::get_decoded_size(
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::decode(const cstring_span& input,
-    string_span& output) {
+                                           string_span& output) {
   assert(output.size() >= get_decoded_size(input));
   auto not_zero = [](auto c) { return c != Traits::charset[0]; };
   auto ii = std::find_if(input.begin(), input.end(), not_zero);

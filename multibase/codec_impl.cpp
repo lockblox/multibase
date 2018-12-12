@@ -40,15 +40,14 @@ std::string codec::impl::encode(const cstring_span& input) {
   return encode(input, true);
 }
 
-std::size_t codec::impl::encode(const cstring_span& input,
-    string_span& output,
+std::size_t codec::impl::encode(const cstring_span& input, string_span& output,
                                 bool include_encoding) {
   auto basic_size = get_encoded_size(input);
   auto size = basic_size + encoding_size(include_encoding);
   if (output.size() < size) throw std::out_of_range("Output buffer too small");
   auto begin = &output[0];
-  auto view = string_span(
-      begin + write_encoding(output, include_encoding), basic_size);
+  auto view =
+      string_span(begin + write_encoding(output, include_encoding), basic_size);
   return encode(input, view);
 }
 

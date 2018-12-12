@@ -1,5 +1,5 @@
-#include <multibase/multibase.h>
 #include <multibase/basic_codec.h>
+#include <multibase/multibase.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
