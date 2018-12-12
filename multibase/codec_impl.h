@@ -7,6 +7,11 @@ namespace multibase {
 class codec::impl {
  public:
   encoding base();
+
+  bool is_valid(const cstring_span& input, bool include_encoding);
+
+  virtual bool is_valid(const cstring_span& input) = 0;
+
   /** Encode to the input, optionally including the encoding type in the output
    */
   std::string encode(const cstring_span& input, bool include_encoding);

@@ -18,6 +18,8 @@ TEST(Multibase, Encoding) {
   output = multibase::string_span(result);
   EXPECT_EQ(expected.size(), multibase::encode(view, output, encoding, false));
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), result.begin()));
+  result.resize(expected.size());
+  EXPECT_TRUE(codec.is_valid(result, false));
 }
 
 TEST(Multibase, MultibaseEncoding) {
@@ -42,6 +44,7 @@ TEST(Multibase, RuntimeEncoding) {
   auto encoding = multibase::encoding::base_16;
   auto result = multibase::codec(encoding).encode(input, false);
   EXPECT_EQ(expected, result);
+  EXPECT_TRUE(multibase::is_valid(result, encoding));
 }
 
 TEST(Multibase, RuntimeDecoding) {
@@ -69,7 +72,15 @@ TEST(Multibase, Base58Encode) {
 
 TEST(Multibase, Base58Decode) {
   auto input = std::string("ZHxwBpKd9UKM");
+  EXPECT_TRUE(multibase::is_valid(input));
   auto expected = "elephant";
   auto result = multibase::decode(input);
   EXPECT_EQ(expected, result);
+}
+
+TEST(Multibase, InvalidCharacters) {
+  auto input = std::string("Z\\=+BpKd9UKM");
+  auto expected = "elephant";
+  EXPECT_FALSE(multibase::is_valid(input));
+  EXPECT_THROW(multibase::decode(input), std::range_error);
 }

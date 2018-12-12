@@ -40,4 +40,8 @@ std::size_t codec::decoded_size(const cstring_span& input) {
 
 encoding codec::base() const { return pImpl->base(); }
 
+bool codec::is_valid(const gsl::cstring_span<>& input, bool include_encoding) {
+  return pImpl->is_valid(input, include_encoding);
+}
+
 }  // namespace multibase

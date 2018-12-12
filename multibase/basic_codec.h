@@ -23,7 +23,9 @@ class basic_codec : public codec::impl {
   using this_type = basic_codec<T, Traits>;
   using codec::impl::decode;
   using codec::impl::encode;
+  using codec::impl::is_valid;
   encoding get_encoding() override;
+  bool is_valid(const cstring_span& input) override;
   std::size_t get_encoded_size(const cstring_span& input) override;
   std::size_t encode(const cstring_span& input, string_span& output) override;
   std::size_t get_decoded_size(const cstring_span& input) override;
@@ -179,7 +181,7 @@ std::size_t basic_codec<T, Traits>::decode(const cstring_span& input,
   auto length = 0;
   for (auto end = input.end(); ii != end && *ii; ++ii) {
     int carry = valset[(unsigned char)(*ii)];
-    if (carry == -1) return 0;
+    if (carry == 255) throw std::range_error("Invalid input character");
     int i = 0;
     for (auto oi = output.rbegin();
          (carry != 0 || i < length) && (oi != output.rend()); ++oi, ++i) {
@@ -198,6 +200,12 @@ std::size_t basic_codec<T, Traits>::decode(const cstring_span& input,
   std::copy(it, output.end(), oit);
   std::fill_n(const_cast<char*>(&output[0]), zeroes, 0);
   return static_cast<size_t>(output_size);
+}
+
+template <encoding T, typename Traits>
+bool basic_codec<T, Traits>::is_valid(const cstring_span& input) {
+  return input.end() == std::find_if(input.begin(), input.end(),
+                                     [](auto c) { return valset[c] == 255; });
 }
 
 template <>

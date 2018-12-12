@@ -38,4 +38,18 @@ encoding base(const cstring_span& input, encoding base) {
   return base == encoding::base_unknown ? static_cast<encoding>(input[0])
                                         : base;
 }
+bool is_valid(const cstring_span& input) {
+  if (input.empty()) {
+    return false;
+  }
+  return is_valid(input, base(input));
+}
+
+bool is_valid(const cstring_span& input, encoding base) {
+  if (base == encoding::base_unknown || input.size() < 2) {
+    return false;
+  }
+  return codec(base).is_valid(input.subspan(1), false);
+}
+
 }  // namespace multibase

@@ -4,6 +4,12 @@
 
 namespace multibase {
 
+/** Determine whether the input is a valid encoding in the embedded base */
+bool is_valid(const cstring_span& input);
+
+/** Determine whether the input is a valid encoding in the given base */
+bool is_valid(const cstring_span& input, encoding base);
+
 std::string encode(const cstring_span& input, encoding base,
                    bool include_encoding = true);
 

@@ -65,6 +65,21 @@ std::string codec::impl::decode(const cstring_span& input) {
 
 encoding codec::impl::base() { return get_encoding(); }
 
+bool codec::impl::is_valid(const cstring_span& input, bool include_encoding) {
+  auto valid = true;
+  if (include_encoding) {
+    if (input.empty()) {
+      valid = false;
+    } else {
+      valid = input[0] == static_cast<char>(base());
+    }
+  }
+  if (valid) {
+    valid = is_valid(input);
+  }
+  return valid;
+}
+
 codec::impl::registry::data_type& codec::impl::registry::data() {
   static data_type data_ =
       data_type{{encoding::base_16, std::make_unique<base_16>()},

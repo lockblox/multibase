@@ -17,6 +17,9 @@ class codec {
 
   encoding base() const;
 
+  /** Determine whether the input is a valid encoding in this base */
+  bool is_valid(const cstring_span& input, bool include_encoding = true);
+
   std::string encode(const cstring_span& input, bool include_encoding = true);
 
   /** Encode the input, writing the result to the user-supplied buffer,
