@@ -22,8 +22,8 @@ int main(void) {
   std::cout << "String input: " << std::hex
             << std::string(input.begin(), input.end()) << std::endl;
 
-  auto input_view =
-      cstring_span(reinterpret_cast<char*>(input.data()), input.size());
+  auto input_view = multibase::cstring_span(
+      reinterpret_cast<char*>(input.data()), input.size());
 
   auto codec = multibase::basic_codec<encoding>{};
   auto encoded = codec.encode(input_view, false);
