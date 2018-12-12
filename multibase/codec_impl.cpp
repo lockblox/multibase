@@ -36,10 +36,6 @@ std::string codec::impl::encode(const cstring_span& input,
   return result;
 }
 
-std::string codec::impl::encode(const cstring_span& input) {
-  return encode(input, true);
-}
-
 std::size_t codec::impl::encode(const cstring_span& input, string_span& output,
                                 bool include_encoding) {
   auto basic_size = get_encoded_size(input);
@@ -48,11 +44,18 @@ std::size_t codec::impl::encode(const cstring_span& input, string_span& output,
   auto begin = &output[0];
   auto view =
       string_span(begin + write_encoding(output, include_encoding), basic_size);
-  return encode(input, view);
+  return encode(input, view, impl_tag{});
 }
 
 std::size_t codec::impl::decoded_size(const cstring_span& input) {
   return get_decoded_size(input);
+}
+
+std::size_t codec::impl::decode(const cstring_span& input,
+                                string_span& output) {
+  if (get_decoded_size(input) > output.size())
+    throw std::out_of_range("Output buffer too small");
+  return decode(input, output, impl_tag{});
 }
 
 std::string codec::impl::decode(const cstring_span& input) {
@@ -75,7 +78,7 @@ bool codec::impl::is_valid(const cstring_span& input, bool include_encoding) {
     }
   }
   if (valid) {
-    valid = is_valid(input);
+    valid = is_valid(input, impl_tag{});
   }
   return valid;
 }

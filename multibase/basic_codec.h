@@ -3,7 +3,6 @@
 #include <multibase/codec_impl.h>
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cmath>
 #include <vector>
 
@@ -16,7 +15,7 @@ struct traits {
 };
 
 /** Template implementation of base encoding which computes a lookup table at
- * copmile time and avoids the virtual function lookup penalty */
+ * compile time and avoids the virtual function lookup penalty */
 template <encoding T, typename Traits = traits<T>>
 class basic_codec : public codec::impl {
  public:
@@ -25,11 +24,13 @@ class basic_codec : public codec::impl {
   using codec::impl::encode;
   using codec::impl::is_valid;
   encoding get_encoding() override;
-  bool is_valid(const cstring_span& input) override;
+  bool is_valid(const cstring_span& input, impl_tag) override;
   std::size_t get_encoded_size(const cstring_span& input) override;
-  std::size_t encode(const cstring_span& input, string_span& output) override;
+  std::size_t encode(const cstring_span& input, string_span& output,
+                     impl_tag) override;
   std::size_t get_decoded_size(const cstring_span& input) override;
-  std::size_t decode(const cstring_span& input, string_span& output) override;
+  std::size_t decode(const cstring_span& input, string_span& output,
+                     impl_tag) override;
 
  private:
   constexpr static auto first = Traits::charset.cbegin();
@@ -134,8 +135,7 @@ std::size_t basic_codec<T, Traits>::get_encoded_size(
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::encode(const cstring_span& input,
-                                           string_span& output) {
-  assert(output.size() >= get_encoded_size(input));
+                                           string_span& output, impl_tag) {
   auto not_zero = [](auto c) { return c != 0; };
   auto ii = std::find_if(std::begin(input), std::end(input), not_zero);
   auto zeroes = std::distance(std::begin(input), ii);
@@ -150,7 +150,6 @@ std::size_t basic_codec<T, Traits>::encode(const cstring_span& input,
       *byte = carry % radix;
       carry /= radix;
     }
-    assert(carry == 0);
     length = i;
   }
   auto it = std::find_if(output.begin() + (output.size() - length),
@@ -173,8 +172,7 @@ std::size_t basic_codec<T, Traits>::get_decoded_size(
 
 template <encoding T, typename Traits>
 std::size_t basic_codec<T, Traits>::decode(const cstring_span& input,
-                                           string_span& output) {
-  assert(output.size() >= get_decoded_size(input));
+                                           string_span& output, impl_tag) {
   auto not_zero = [](auto c) { return c != Traits::charset[0]; };
   auto ii = std::find_if(input.begin(), input.end(), not_zero);
   auto zeroes = std::distance(input.begin(), ii);
@@ -190,7 +188,6 @@ std::size_t basic_codec<T, Traits>::decode(const cstring_span& input,
       *byte = static_cast<unsigned char>(carry % 256);
       carry /= 256;
     }
-    assert(carry == 0);
     length = i;
   }
   auto it = std::find_if(output.begin() + (output.size() - length),
@@ -203,7 +200,7 @@ std::size_t basic_codec<T, Traits>::decode(const cstring_span& input,
 }
 
 template <encoding T, typename Traits>
-bool basic_codec<T, Traits>::is_valid(const cstring_span& input) {
+bool basic_codec<T, Traits>::is_valid(const cstring_span& input, impl_tag) {
   return input.end() == std::find_if(input.begin(), input.end(),
                                      [](auto c) { return valset[c] == 255; });
 }

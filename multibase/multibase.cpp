@@ -19,7 +19,7 @@ std::size_t encoded_size(const cstring_span& input, encoding base,
 }
 
 std::string decode(const cstring_span& input, encoding base) {
-  assert(input.size() > 0);
+  if (input.empty()) return std::string();
   auto decoder = codec(multibase::base(input, base));
   auto view = cstring_span(&input[0] + 1, input.size() - 1);
   return decoder.decode(view);

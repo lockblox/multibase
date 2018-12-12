@@ -18,6 +18,7 @@ TEST(Multibase, Encoding) {
   output = multibase::string_span(result);
   EXPECT_EQ(expected.size(), multibase::encode(view, output, encoding, false));
   EXPECT_TRUE(std::equal(expected.begin(), expected.end(), result.begin()));
+  EXPECT_FALSE(codec.is_valid(result, false));
   result.resize(expected.size());
   EXPECT_TRUE(codec.is_valid(result, false));
 }
@@ -51,6 +52,9 @@ TEST(Multibase, RuntimeDecoding) {
   auto expected = std::string{0, 0, 0, 0, 0, 0, 1, 2, 4, 8, 16, 127, -13};
   auto input = std::string("0000001020408107ff3");
   auto encoding = multibase::encoding::base_16;
+  auto output = std::string();
+  auto view = multibase::string_span(output);
+  EXPECT_THROW(multibase::decode(input, view, encoding), std::out_of_range);
   auto result = multibase::codec(encoding).decode(input);
   EXPECT_EQ(expected, result);
 }

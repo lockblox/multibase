@@ -8,31 +8,24 @@ class codec::impl {
  public:
   encoding base();
 
-  bool is_valid(const cstring_span& input, bool include_encoding);
-
-  virtual bool is_valid(const cstring_span& input) = 0;
+  bool is_valid(const cstring_span& input, bool include_encoding = true);
 
   /** Encode to the input, optionally including the encoding type in the output
    */
-  std::string encode(const cstring_span& input, bool include_encoding);
-
-  std::string encode(const cstring_span& input);
+  std::string encode(const cstring_span& input, bool include_encoding = true);
 
   /** Encode the input, writing the result to the user-supplied buffer,
    * optionally including the encoding type in the output
    * @return Number of bytes written */
   std::size_t encode(const cstring_span& input, string_span& output,
-                     bool include_encoding);
+                     bool include_encoding = true);
 
-  virtual std::size_t encode(const cstring_span& input,
-                             string_span& output) = 0;
-
-  std::size_t encoded_size(const cstring_span& input, bool include_encoding);
+  std::size_t encoded_size(const cstring_span& input,
+                           bool include_encoding = true);
 
   std::string decode(const cstring_span& input);
 
-  virtual std::size_t decode(const cstring_span& input,
-                             string_span& output) = 0;
+  std::size_t decode(const cstring_span& input, string_span& output);
 
   std::size_t decoded_size(const cstring_span& input);
 
@@ -51,6 +44,12 @@ class codec::impl {
   };
 
  protected:
+  class impl_tag {};
+  virtual bool is_valid(const cstring_span& input, impl_tag) = 0;
+  virtual std::size_t encode(const cstring_span& input, string_span& output,
+                             impl_tag) = 0;
+  virtual std::size_t decode(const cstring_span& input, string_span& output,
+                             impl_tag) = 0;
   virtual encoding get_encoding() = 0;
   virtual std::size_t get_encoded_size(const cstring_span& input) = 0;
   virtual std::size_t get_decoded_size(const cstring_span& input) = 0;
