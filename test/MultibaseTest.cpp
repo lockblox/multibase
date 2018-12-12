@@ -61,16 +61,15 @@ TEST(Multibase, RuntimeMultibaseDecoding) {
 
 TEST(Multibase, Base58Encode) {
   auto input = std::string("elephant");
-  auto expected = "HxwBpKd9UKM";
+  auto expected = "ZHxwBpKd9UKM";
   auto codec = multibase::base_58_btc{};
-  auto result = codec.encode(input, false);
+  auto result = codec.encode(input);
   EXPECT_EQ(expected, result);
 }
 
 TEST(Multibase, Base58Decode) {
-  auto input = std::string("HxwBpKd9UKM");
+  auto input = std::string("ZHxwBpKd9UKM");
   auto expected = "elephant";
-  auto codec = multibase::base_58_btc{};
-  auto result = codec.decode(input);
+  auto result = multibase::decode(input);
   EXPECT_EQ(expected, result);
 }

@@ -67,7 +67,8 @@ encoding codec::impl::base() { return get_encoding(); }
 
 codec::impl::registry::data_type& codec::impl::registry::data() {
   static data_type data_ =
-      data_type{{encoding::base_16, std::make_unique<base_16>()}};
+      data_type{{encoding::base_16, std::make_unique<base_16>()},
+                {encoding::base_58_btc, std::make_unique<base_58_btc>()}};
   return data_;
 }
 
