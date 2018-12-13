@@ -3,6 +3,7 @@ services:
     - docker
 language: cpp
 compiler: gcc
+osx_image: xcode10.1
 cache:
   directories:
   - $HOME/.hunter
@@ -12,10 +13,7 @@ install:
     - if [ $TRAVIS_OS_NAME == osx ]; then
            brew update;
            brew install openssl cmake ccache;
-           brew install gcc --HEAD;
-      export PATH="/usr/local/opt/ccache/libexec:$PATH";
-      export CXX="g++";
-      export CC="gcc";
+           export PATH="/usr/local/opt/ccache/libexec:$PATH";
       fi
 script:
     - if [ $TRAVIS_OS_NAME == osx ]; then
