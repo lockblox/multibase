@@ -1,6 +1,6 @@
 #pragma once
 
-#include <multibase/codec_impl.h>
+#include <multibase/detail/codec_impl.h>
 #include <algorithm>
 #include <array>
 #include <cmath>

@@ -26,7 +26,9 @@ add_library(libmultibase
         multibase/codec.cpp
         multibase/codec.h
         multibase/encoding.cpp
-        multibase/encoding.h multibase/codec_impl.cpp multibase/codec_impl.h)
+        multibase/encoding.h
+        multibase/detail/codec_impl.cpp
+        multibase/detail/codec_impl.h)
 target_include_directories(libmultibase PUBLIC "${multibase_SOURCE_DIR}")
 set_target_properties(libmultibase PROPERTIES OUTPUT_NAME multibase)
 target_link_libraries(libmultibase PUBLIC Microsoft.GSL::GSL)

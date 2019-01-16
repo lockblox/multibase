@@ -1,6 +1,6 @@
 #include "codec.h"
 #include <multibase/codec.h>
-#include <multibase/codec_impl.h>
+#include <multibase/detail/codec_impl.h>
 
 namespace multibase {
 
