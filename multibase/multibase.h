@@ -10,7 +10,7 @@ class multibase {
   explicit multibase(cstring_span data, encoding base = encoding::base_unknown);
 
   encoding base() const;
-  cstring_span data() const;
+  cstring_span encoded_data() const;
 
   bool operator==(const multibase& rhs) const;
   bool operator!=(const multibase& rhs) const;

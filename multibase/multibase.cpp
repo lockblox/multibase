@@ -29,7 +29,7 @@ std::string decode(const cstring_span& input, encoding base) {
 std::size_t decode(const cstring_span& input, string_span& output,
                    encoding base) {
   auto mb = multibase(input, base);
-  return codec(mb.base()).decode(mb.data(), output);
+  return codec(mb.base()).decode(mb.encoded_data(), output);
 }
 
 std::size_t decoded_size(const cstring_span& input, encoding base) {
@@ -49,7 +49,7 @@ bool is_valid(const cstring_span& input, encoding base) {
 }
 
 bool is_valid(const multibase& value) {
-  return codec(value.base()).is_valid(value.data(), false);
+  return codec(value.base()).is_valid(value.encoded_data(), false);
 }
 
 multibase::multibase(cstring_span data, encoding base)
@@ -65,7 +65,7 @@ multibase::multibase(cstring_span data, encoding base)
 
 encoding multibase::base() const { return base_; }
 
-cstring_span multibase::data() const { return data_; }
+cstring_span multibase::encoded_data() const { return data_; }
 
 bool multibase::operator==(const multibase& rhs) const {
   return data_ == rhs.data_;
