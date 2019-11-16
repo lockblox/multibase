@@ -1,10 +1,11 @@
-# Compile and run all unit tests
-hunter_add_package(GTest)
-find_package(GTest CONFIG REQUIRED)
-add_executable(MultibaseTest MultibaseTest.cpp main.cpp)
-target_link_libraries(MultibaseTest PUBLIC libmultibase PUBLIC GTest::main)
-set_target_properties(MultibaseTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                      ${CMAKE_CURRENT_BINARY_DIR})
-add_test(NAME MultibaseTest
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/MultibaseTest)
+find_package(GTest MODULE REQUIRED)
+add_executable(multibase_test multibase_test.cpp main.cpp)
+target_link_libraries(multibase_test PRIVATE libmultibase GTest::GTest GTest::Main)
+set_target_properties(multibase_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+        ${CMAKE_CURRENT_BINARY_DIR})
+gtest_discover_tests(multibase_test)
+if (MSVC)
+    target_compile_options(multibase_test PRIVATE /W4 /WX /MP)
+else ()
+    target_compile_options(multibase_test PRIVATE -Wall -Wextra -pedantic -Werror)
+endif ()

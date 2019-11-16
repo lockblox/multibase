@@ -84,7 +84,6 @@ TEST(Multibase, Base58Decode) {
 
 TEST(Multibase, InvalidCharacters) {
   auto input = std::string("Z\\=+BpKd9UKM");
-  auto expected = "elephant";
   EXPECT_FALSE(multibase::is_valid(input));
   EXPECT_THROW(multibase::decode(input), std::range_error);
 }
