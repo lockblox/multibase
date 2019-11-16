@@ -45,7 +45,8 @@ install(TARGETS libmultibase
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
-install(FILES ${HEADER_FILES} DESTINATION include/multibase)
+install(DIRECTORY multibase DESTINATION include
+        FILES_MATCHING PATTERN "*.h")
 configure_package_config_file(
         "${multibase_SOURCE_DIR}/cmake/multibaseConfig.cmake"
         "${multibase_BINARY_DIR}/multibaseConfig.cmake"
