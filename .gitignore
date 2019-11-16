@@ -35,7 +35,7 @@
 .idea
 .vs
 build
-cmake-build-debug
+cmake-*
 
 # Editor files
 *.swp
