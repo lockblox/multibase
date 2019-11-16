@@ -42,7 +42,7 @@ bool is_valid(const cstring_span& input, encoding base) {
   try {
     auto mb = multibase(input, base);
     result = is_valid(mb);
-  } catch (std::range_error& e) {
+  } catch (std::range_error&) {
     result = false;
   }
   return result;

@@ -195,7 +195,7 @@ std::size_t basic_codec<T, Traits>::decode(const cstring_span& input,
   auto output_size = zeroes + std::distance(it, output.end());
   auto oit = const_cast<char*>(&output[zeroes]);
   std::copy(it, output.end(), oit);
-  std::fill_n(const_cast<char*>(&output[0]), zeroes, 0);
+  std::fill_n(const_cast<char*>(&output[0]), zeroes, char(0));
   return static_cast<size_t>(output_size);
 }
 

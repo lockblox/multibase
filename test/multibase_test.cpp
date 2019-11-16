@@ -10,7 +10,7 @@ TEST(Multibase, Encoding) {
   auto view = multibase::cstring_span(begin, input.size());
   auto result = codec.encode(view, false);
   EXPECT_EQ(expected, result);
-  std::fill(result.begin(), result.end(), 0);
+  std::fill(result.begin(), result.end(), char(0));
   auto output = multibase::string_span(result);
   auto encoding = multibase::encoding::base_16;
   EXPECT_THROW(multibase::encode(view, output, encoding), std::out_of_range);
