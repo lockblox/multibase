@@ -4,17 +4,17 @@
 
 namespace multibase {
 
-std::size_t codec::impl::encoding_size(bool include_encoding) {
+codec::impl::size_type codec::impl::encoding_size(bool include_encoding) {
   return include_encoding ? sizeof(encoding_t) : 0;
 }
 
-std::size_t codec::impl::encoded_size(const cstring_span& input,
-                                      bool include_encoding) {
+codec::impl::size_type codec::impl::encoded_size(const cstring_span& input,
+                                                 bool include_encoding) {
   return get_encoded_size(input) + encoding_size(include_encoding);
 }
 
-std::size_t codec::impl::write_encoding(string_span& output,
-                                        bool include_encoding) {
+codec::impl::size_type codec::impl::write_encoding(string_span& output,
+                                                   bool include_encoding) {
   if (!include_encoding) return 0;
   auto bytes_written = encoding_size(include_encoding);
   if (bytes_written > output.size())
@@ -36,8 +36,9 @@ std::string codec::impl::encode(const cstring_span& input,
   return result;
 }
 
-std::size_t codec::impl::encode(const cstring_span& input, string_span& output,
-                                bool include_encoding) {
+codec::impl::size_type codec::impl::encode(const cstring_span& input,
+                                           string_span& output,
+                                           bool include_encoding) {
   auto basic_size = get_encoded_size(input);
   auto size = basic_size + encoding_size(include_encoding);
   if (output.size() < size) throw std::out_of_range("Output buffer too small");
@@ -47,12 +48,12 @@ std::size_t codec::impl::encode(const cstring_span& input, string_span& output,
   return encode(input, view, impl_tag{});
 }
 
-std::size_t codec::impl::decoded_size(const cstring_span& input) {
+codec::impl::size_type codec::impl::decoded_size(const cstring_span& input) {
   return get_decoded_size(input);
 }
 
-std::size_t codec::impl::decode(const cstring_span& input,
-                                string_span& output) {
+codec::impl::size_type codec::impl::decode(const cstring_span& input,
+                                           string_span& output) {
   if (get_decoded_size(input) > output.size())
     throw std::out_of_range("Output buffer too small");
   return decode(input, output, impl_tag{});

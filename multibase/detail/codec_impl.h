@@ -8,6 +8,8 @@ class codec::impl {
  public:
   encoding base();
 
+  using size_type = cstring_span::size_type;
+
   bool is_valid(const cstring_span& input, bool include_encoding = true);
 
   /** Encode to the input, optionally including the encoding type in the output
@@ -17,17 +19,17 @@ class codec::impl {
   /** Encode the input, writing the result to the user-supplied buffer,
    * optionally including the encoding type in the output
    * @return Number of bytes written */
-  std::size_t encode(const cstring_span& input, string_span& output,
-                     bool include_encoding = true);
+  size_type encode(const cstring_span& input, string_span& output,
+                   bool include_encoding = true);
 
-  std::size_t encoded_size(const cstring_span& input,
-                           bool include_encoding = true);
+  size_type encoded_size(const cstring_span& input,
+                         bool include_encoding = true);
 
   std::string decode(const cstring_span& input);
 
-  std::size_t decode(const cstring_span& input, string_span& output);
+  size_type decode(const cstring_span& input, string_span& output);
 
-  std::size_t decoded_size(const cstring_span& input);
+  size_type decoded_size(const cstring_span& input);
 
   /** Registry of codec implementations */
   class registry {
@@ -46,17 +48,17 @@ class codec::impl {
  protected:
   class impl_tag {};
   virtual bool is_valid(const cstring_span& input, impl_tag) = 0;
-  virtual std::size_t encode(const cstring_span& input, string_span& output,
-                             impl_tag) = 0;
-  virtual std::size_t decode(const cstring_span& input, string_span& output,
-                             impl_tag) = 0;
+  virtual size_type encode(const cstring_span& input, string_span& output,
+                           impl_tag) = 0;
+  virtual size_type decode(const cstring_span& input, string_span& output,
+                           impl_tag) = 0;
   virtual encoding get_encoding() = 0;
-  virtual std::size_t get_encoded_size(const cstring_span& input) = 0;
-  virtual std::size_t get_decoded_size(const cstring_span& input) = 0;
+  virtual size_type get_encoded_size(const cstring_span& input) = 0;
+  virtual size_type get_decoded_size(const cstring_span& input) = 0;
 
  private:
-  std::size_t encoding_size(bool include_encoding);
-  std::size_t write_encoding(string_span& output, bool include_encoding);
+  size_type encoding_size(bool include_encoding);
+  size_type write_encoding(string_span& output, bool include_encoding);
 };
 
 }  // namespace multibase
