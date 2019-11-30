@@ -4,7 +4,7 @@
 
 namespace multibase {
 
-class codec::impl {
+class codec_impl {
  public:
   encoding base();
 
@@ -36,7 +36,7 @@ class codec::impl {
    public:
     registry() = default;
     using key_type = encoding;
-    using mapped_type = std::shared_ptr<codec::impl>;
+    using mapped_type = std::shared_ptr<codec_impl>;
     using value_type = std::pair<key_type, mapped_type>;
     mapped_type& operator[](const key_type& key);
 
@@ -57,7 +57,7 @@ class codec::impl {
   virtual size_type get_decoded_size(const cstring_span& input) = 0;
 
  private:
-  size_type encoding_size(bool include_encoding);
+  static size_type encoding_size(bool include_encoding);
   size_type write_encoding(string_span& output, bool include_encoding);
 };
 

@@ -1,10 +1,11 @@
 #include "codec.h"
+
 #include <multibase/codec.h>
-#include <multibase/detail/codec_impl.h>
+#include <multibase/codec_impl.h>
 
 namespace multibase {
 
-codec::codec(encoding base) : pImpl(codec::impl::registry()[base].get()) {
+codec::codec(encoding base) : pImpl(codec_impl::registry()[base].get()) {
   if (!pImpl) {
     auto msg = std::string("No codec implementation for encoding ");
     msg.push_back(static_cast<char>(base));

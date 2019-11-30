@@ -1,20 +1,21 @@
-#include "codec_impl.h"
+#include "multibase/codec_impl.h"
+
 #include <multibase/basic_codec.h>
-#include <multibase/detail/codec_impl.h>
+#include <multibase/identity_codec.h>
 
 namespace multibase {
 
-codec::impl::size_type codec::impl::encoding_size(bool include_encoding) {
+codec_impl::size_type codec_impl::encoding_size(bool include_encoding) {
   return include_encoding ? sizeof(encoding_t) : 0;
 }
 
-codec::impl::size_type codec::impl::encoded_size(const cstring_span& input,
-                                                 bool include_encoding) {
+codec_impl::size_type codec_impl::encoded_size(const cstring_span& input,
+                                               bool include_encoding) {
   return get_encoded_size(input) + encoding_size(include_encoding);
 }
 
-codec::impl::size_type codec::impl::write_encoding(string_span& output,
-                                                   bool include_encoding) {
+codec_impl::size_type codec_impl::write_encoding(string_span& output,
+                                                 bool include_encoding) {
   if (!include_encoding) return 0;
   auto bytes_written = encoding_size(include_encoding);
   if (bytes_written > output.size())
@@ -26,8 +27,8 @@ codec::impl::size_type codec::impl::write_encoding(string_span& output,
   return bytes_written;
 }
 
-std::string codec::impl::encode(const cstring_span& input,
-                                bool include_encoding) {
+std::string codec_impl::encode(const cstring_span& input,
+                               bool include_encoding) {
   auto result = std::string(encoded_size(input, include_encoding), 0);
   auto output = string_span(result);
   auto size = encode(input, output, include_encoding);
@@ -36,9 +37,9 @@ std::string codec::impl::encode(const cstring_span& input,
   return result;
 }
 
-codec::impl::size_type codec::impl::encode(const cstring_span& input,
-                                           string_span& output,
-                                           bool include_encoding) {
+codec_impl::size_type codec_impl::encode(const cstring_span& input,
+                                         string_span& output,
+                                         bool include_encoding) {
   auto basic_size = get_encoded_size(input);
   auto size = basic_size + encoding_size(include_encoding);
   if (output.size() < size) throw std::out_of_range("Output buffer too small");
@@ -48,18 +49,18 @@ codec::impl::size_type codec::impl::encode(const cstring_span& input,
   return encode(input, view, impl_tag{});
 }
 
-codec::impl::size_type codec::impl::decoded_size(const cstring_span& input) {
+codec_impl::size_type codec_impl::decoded_size(const cstring_span& input) {
   return get_decoded_size(input);
 }
 
-codec::impl::size_type codec::impl::decode(const cstring_span& input,
-                                           string_span& output) {
+codec_impl::size_type codec_impl::decode(const cstring_span& input,
+                                         string_span& output) {
   if (get_decoded_size(input) > output.size())
     throw std::out_of_range("Output buffer too small");
   return decode(input, output, impl_tag{});
 }
 
-std::string codec::impl::decode(const cstring_span& input) {
+std::string codec_impl::decode(const cstring_span& input) {
   auto size = decoded_size(input);
   auto output = std::string(size, 0);
   auto view = string_span(output);
@@ -67,9 +68,9 @@ std::string codec::impl::decode(const cstring_span& input) {
   return output;
 }
 
-encoding codec::impl::base() { return get_encoding(); }
+encoding codec_impl::base() { return get_encoding(); }
 
-bool codec::impl::is_valid(const cstring_span& input, bool include_encoding) {
+bool codec_impl::is_valid(const cstring_span& input, bool include_encoding) {
   auto valid = true;
   if (include_encoding) {
     if (input.empty()) {
@@ -84,15 +85,16 @@ bool codec::impl::is_valid(const cstring_span& input, bool include_encoding) {
   return valid;
 }
 
-codec::impl::registry::data_type& codec::impl::registry::data() {
+codec_impl::registry::data_type& codec_impl::registry::data() {
   static data_type data_ =
-      data_type{{encoding::base_16, std::make_unique<base_16>()},
+      data_type{{encoding::base_unknown, std::make_unique<identity_codec>()},
+                {encoding::base_16, std::make_unique<base_16>()},
                 {encoding::base_58_btc, std::make_unique<base_58_btc>()}};
   return data_;
 }
 
-codec::impl::registry::mapped_type& codec::impl::registry::operator[](
-    const codec::impl::registry::key_type& key) {
+codec_impl::registry::mapped_type& codec_impl::registry::operator[](
+    const codec_impl::registry::key_type& key) {
   return data()[key];
 }
 

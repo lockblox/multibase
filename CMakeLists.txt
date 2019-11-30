@@ -23,8 +23,10 @@ add_library(libmultibase
         multibase/codec.h
         multibase/encoding.cpp
         multibase/encoding.h
-        multibase/detail/codec_impl.cpp
-        multibase/detail/codec_impl.h)
+        multibase/codec_impl.cpp
+        multibase/codec_impl.h
+        multibase/identity_codec.cpp
+        multibase/identity_codec.h)
 target_include_directories(libmultibase PUBLIC
         $<BUILD_INTERFACE:${multibase_SOURCE_DIR}>
         $<BUILD_INTERFACE:${GSL_INCLUDE_DIR}>

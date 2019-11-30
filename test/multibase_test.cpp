@@ -82,6 +82,20 @@ TEST(Multibase, Base58Decode) {
   EXPECT_EQ(expected, result);
 }
 
+TEST(Multibase, IdentityEncode) {
+  auto input = std::vector<char>{1, 2, 4, 8, 16, 127, -13};
+  auto expected = std::vector<char>{0, 1, 2, 4, 8, 16, 127, -13};
+  auto result = multibase::encode(input);
+  EXPECT_TRUE(std::equal(result.begin(), result.end(), expected.begin()));
+}
+
+TEST(Multibase, IdentityDecode) {
+  auto input = std::vector<char>{0, 1, 2, 4, 8, 16, 127, -13};
+  auto expected = std::vector<char>{1, 2, 4, 8, 16, 127, -13};
+  auto result = multibase::decode(input);
+  EXPECT_TRUE(std::equal(result.begin(), result.end(), expected.begin()));
+}
+
 TEST(Multibase, InvalidCharacters) {
   auto input = std::string("Z\\=+BpKd9UKM");
   EXPECT_FALSE(multibase::is_valid(input));

@@ -9,8 +9,8 @@ class multibase {
   multibase() = default;
   explicit multibase(cstring_span data, encoding base = encoding::base_unknown);
 
-  encoding base() const;
-  cstring_span encoded_data() const;
+  [[nodiscard]] encoding base() const;
+  [[nodiscard]] cstring_span encoded_data() const;
 
   bool operator==(const multibase& rhs) const;
   bool operator!=(const multibase& rhs) const;
@@ -28,11 +28,13 @@ bool is_valid(const multibase& input);
 bool is_valid(const cstring_span& input,
               encoding base = encoding::base_unknown);
 
-std::string encode(const cstring_span& input, encoding base,
+std::string encode(const cstring_span& input,
+                   encoding base = encoding::base_unknown,
                    bool include_encoding = true);
 
 std::size_t encode(const cstring_span& input, string_span& output,
-                   encoding base, bool include_encoding = true);
+                   encoding base = encoding::base_unknown,
+                   bool include_encoding = true);
 
 std::size_t encoded_size(const cstring_span& input, encoding base,
                          bool include_encoding = true);

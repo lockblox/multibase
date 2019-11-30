@@ -1,6 +1,7 @@
 #pragma once
 
-#include <multibase/detail/codec_impl.h>
+#include <multibase/codec_impl.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -17,12 +18,12 @@ struct traits {
 /** Template implementation of base encoding which computes a lookup table at
  * compile time and avoids the virtual function lookup penalty */
 template <encoding T, typename Traits = traits<T>>
-class basic_codec : public codec::impl {
+class basic_codec : public codec_impl {
  public:
   using this_type = basic_codec<T, Traits>;
-  using codec::impl::decode;
-  using codec::impl::encode;
-  using codec::impl::is_valid;
+  using codec_impl::decode;
+  using codec_impl::encode;
+  using codec_impl::is_valid;
   encoding get_encoding() override;
   bool is_valid(const cstring_span& input, impl_tag) override;
   size_type get_encoded_size(const cstring_span& input) override;

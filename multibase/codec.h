@@ -11,11 +11,13 @@ namespace multibase {
 using cstring_span = gsl::cstring_span<>;
 using string_span = gsl::string_span<>;
 
+class codec_impl;
+
 class codec {
  public:
   explicit codec(encoding base);
 
-  encoding base() const;
+  [[nodiscard]] encoding base() const;
 
   /** Determine whether the input is a valid encoding in this base */
   bool is_valid(const cstring_span& input, bool include_encoding = true);
@@ -37,10 +39,8 @@ class codec {
 
   std::size_t decoded_size(const cstring_span& input);
 
-  class impl;
-
  private:
-  impl* pImpl;
+  codec_impl* pImpl;
 };
 
 }  // namespace multibase
