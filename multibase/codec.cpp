@@ -1,48 +1,41 @@
-#include "codec.h"
+#include "multibase/codec.h"
 
-#include <multibase/codec.h>
-#include <multibase/codec_impl.h>
+#include <multibase/basic_algorithm.h>
+#include <multibase/identity_algorithm.h>
+
+#include <cassert>
 
 namespace multibase {
 
-codec::codec(encoding base) : pImpl(codec_impl::registry()[base].get()) {
-  if (!pImpl) {
-    auto msg = std::string("No codec implementation for encoding ");
-    msg.push_back(static_cast<char>(base));
-    throw std::out_of_range(msg);
+std::unique_ptr<codec::algorithm> codec::encoder(encoding base) {
+  switch (base) {
+    case encoding::base_unknown:
+      return std::make_unique<identity_algorithm::encoder>();
+    case encoding::base_16:
+      return std::make_unique<base_16::encoder>();
+    case encoding::base_58_btc:
+      return std::make_unique<base_58_btc::encoder>();
+    default:
+      return nullptr;
   }
 }
 
-std::string codec::encode(const cstring_span& input, bool include_encoding) {
-  return pImpl->encode(input, include_encoding);
+std::unique_ptr<codec::algorithm> codec::decoder(encoding base) {
+  switch (base) {
+    case encoding::base_unknown:
+      return std::make_unique<identity_algorithm::decoder>();
+    case encoding::base_16:
+      return std::make_unique<base_16::decoder>();
+    case encoding::base_58_btc:
+      return std::make_unique<base_58_btc::decoder>();
+    default:
+      return nullptr;
+  }
 }
 
-std::size_t codec::encode(const cstring_span& input, string_span& output,
-                          bool include_encoding) {
-  return pImpl->encode(input, output, include_encoding);
-}
+codec::codec(encoding base)
+    : base_(base), encoder_(encoder(base)), decoder_(decoder(base)) {}
 
-std::size_t codec::encoded_size(const cstring_span& input,
-                                bool include_encoding) {
-  return pImpl->encoded_size(input, include_encoding);
-}
-
-std::string codec::decode(const cstring_span& input) {
-  return pImpl->decode(input);
-}
-
-std::size_t codec::decode(const cstring_span& input, string_span& output) {
-  return pImpl->decode(input, output);
-}
-
-std::size_t codec::decoded_size(const cstring_span& input) {
-  return pImpl->decoded_size(input);
-}
-
-encoding codec::base() const { return pImpl->base(); }
-
-bool codec::is_valid(const gsl::cstring_span<>& input, bool include_encoding) {
-  return pImpl->is_valid(input, include_encoding);
-}
+encoding codec::base() const { return base_; }
 
 }  // namespace multibase

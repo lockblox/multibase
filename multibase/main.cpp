@@ -1,10 +1,10 @@
-#include <multibase/basic_codec.h>
-#include <multibase/multibase.h>
+#include <multibase/basic_algorithm.h>
+
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 
-int main(void) {
+int main() {
   static constexpr auto encoding = multibase::encoding::base_16;
   std::cout << "Radix: " << multibase::traits<encoding>::charset.size()
             << std::endl;
@@ -22,11 +22,11 @@ int main(void) {
   std::cout << "String input: " << std::hex
             << std::string(input.begin(), input.end()) << std::endl;
 
-  auto input_view = multibase::cstring_span(
-      reinterpret_cast<char*>(input.data()), input.size());
+  auto input_view =
+      std::string_view(reinterpret_cast<char*>(input.data()), input.size());
 
-  auto codec = multibase::basic_codec<encoding>{};
-  auto encoded = codec.encode(input_view, false);
+  auto codec = multibase::codec{encoding};
+  auto encoded = codec.encode(input_view.begin(), input_view.end());
   std::cout << "Encoded: " << encoded << std::endl;
   auto decoded = codec.decode(encoded);
   std::cout << "Decoded: ";
