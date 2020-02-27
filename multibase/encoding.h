@@ -1,9 +1,12 @@
 #pragma once
+#include <istream>
+#include <ostream>
 
 namespace multibase {
 
 enum class encoding : unsigned char {
-  base_unknown = 0,
+  base_unknown = '?',
+  base_256 = 0,
   base_16 = 'f',
   base_16_upper = 'F',
   base_32 = 'b',

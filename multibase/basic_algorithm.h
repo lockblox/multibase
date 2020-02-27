@@ -1,6 +1,7 @@
 #pragma once
 
-#include <multibase/codec.h>
+#include <multibase/algorithm.h>
+#include <multibase/encoding.h>
 
 #include <algorithm>
 #include <array>
@@ -21,14 +22,14 @@ struct traits {
 template <encoding T, typename Traits = traits<T>>
 class basic_algorithm {
  public:
-  class encoder : public codec::algorithm {
+  class encoder : public algorithm {
    public:
     size_t output_size() override;
     size_t block_size() override;
     std::string process(std::string_view input) override;
   };
 
-  class decoder : public codec::algorithm {
+  class decoder : public algorithm {
    public:
     size_t output_size() override;
     size_t block_size() override;
@@ -146,7 +147,6 @@ std::string basic_algorithm<T, Traits>::encoder::process(
     }
     length = i;
   }
-  auto it = output.begin() + (output.size() - length);
   std::transform(output.begin(), output.end(), output.begin(),
                  [](auto c) { return Traits::charset[c]; });
   output.erase(0, output.size() != output_size() ? output.size() - length : 0);
@@ -182,7 +182,9 @@ std::string basic_algorithm<T, Traits>::decoder::process(
   auto ii = input.begin();
   for (auto end = input.end(); ii != end && *ii; ++ii) {
     int carry = valset[(unsigned char)(*ii)];
-    if (carry == 255) throw std::invalid_argument("Invalid input character");
+    if (carry == 255)
+      throw std::invalid_argument(std::string{"Invalid input character "} +
+                                  *ii);
     int i = output.size();
     while (carry != 0 || i > 0) {
       int index = i - 1;

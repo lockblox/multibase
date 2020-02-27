@@ -1,4 +1,5 @@
 #include <multibase/basic_algorithm.h>
+#include <multibase/codec.h>
 
 #include <iomanip>
 #include <iostream>
@@ -18,17 +19,17 @@ int main() {
     std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)(c)
               << ",";
   }
+  auto input_string = std::string{input.begin(), input.end()};
   std::cout << std::endl;
-  std::cout << "String input: " << std::hex
-            << std::string(input.begin(), input.end()) << std::endl;
+  std::cout << "String input: " << input_string << std::endl;
 
   auto input_view =
       std::string_view(reinterpret_cast<char*>(input.data()), input.size());
 
-  auto codec = multibase::codec{encoding};
-  auto encoded = codec.encode(input_view.begin(), input_view.end());
+  auto encoded =
+      multibase::encode(input_view.begin(), input_view.end(), encoding);
   std::cout << "Encoded: " << encoded << std::endl;
-  auto decoded = codec.decode(encoded);
+  auto decoded = multibase::decode(encoded);
   std::cout << "Decoded: ";
   for (auto o : decoded) {
     std::cout << std::hex << (int)(o) << ",";

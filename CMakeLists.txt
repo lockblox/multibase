@@ -21,7 +21,8 @@ add_library(libmultibase
         multibase/codec.h
         multibase/identity_algorithm.cpp
         multibase/identity_algorithm.h
-        )
+        multibase/algorithm.cpp
+        multibase/algorithm.h)
 target_include_directories(libmultibase PUBLIC
         $<BUILD_INTERFACE:${multibase_SOURCE_DIR}>
         $<BUILD_INTERFACE:${Boost_INCLUDE_DIRS}>
