@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(multibase VERSION 1.0 LANGUAGES CXX)
 
 option(BUILD_TESTING "Build unit tests" ON)
+option(BUILD_COVERAGE "Build with coverage" OFF)
 
 find_package(chunx CONFIG REQUIRED)
 find_package(Boost REQUIRED)
@@ -23,6 +24,7 @@ add_library(libmultibase
         multibase/identity_algorithm.h
         multibase/algorithm.cpp
         multibase/algorithm.h)
+
 target_include_directories(libmultibase PUBLIC
         $<BUILD_INTERFACE:${multibase_SOURCE_DIR}>
         $<BUILD_INTERFACE:${Boost_INCLUDE_DIRS}>
@@ -56,7 +58,29 @@ install(FILES "${multibase_BINARY_DIR}/multibaseConfigVersion.cmake"
         "${multibase_BINARY_DIR}/multibaseConfig.cmake"
         DESTINATION share/cmake/multibase)
 
+if (MSVC)
+    target_compile_options(libmultibase PRIVATE /W4 /WX /MP)
+else ()
+    if (BUILD_COVERAGE)
+        set(COVERAGE_FLAGS "--coverage")
+    endif ()
+    target_compile_options(libmultibase PRIVATE -Wall -Wextra -pedantic -Werror
+            ${COVERAGE_FLAGS})
+endif ()
+
 if (BUILD_TESTING)
     enable_testing()
-    add_subdirectory(test)
+    find_package(GTest MODULE REQUIRED)
+    add_executable(multibase_test test/multibase_test.cpp test/main.cpp)
+    target_link_libraries(multibase_test PRIVATE libmultibase GTest::GTest GTest::Main)
+    set_target_properties(multibase_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+            ${CMAKE_CURRENT_BINARY_DIR})
+    gtest_discover_tests(multibase_test)
+    if (MSVC)
+        target_compile_options(multibase_test PRIVATE /W4 /WX /MP)
+    else ()
+        target_compile_options(multibase_test PRIVATE -Wall -Wextra -pedantic
+                -Werror ${COVERAGE_FLAGS})
+        target_link_libraries(multibase_test PRIVATE ${COVERAGE_FLAGS})
+    endif ()
 endif ()
