@@ -4,6 +4,7 @@ project(multibase VERSION 1.0 LANGUAGES CXX)
 
 option(BUILD_TESTING "Build unit tests" ON)
 option(BUILD_COVERAGE "Build with coverage" OFF)
+option(BUILD_BENCHMARK "Build benchmark" OFF)
 
 find_package(chunx CONFIG REQUIRED)
 find_package(Boost REQUIRED)
@@ -62,10 +63,20 @@ if (MSVC)
     target_compile_options(libmultibase PRIVATE /W4 /WX /MP)
 else ()
     if (BUILD_COVERAGE)
-        set(COVERAGE_FLAGS "--coverage")
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            set(COVERAGE_FLAGS "--coverage")
+        endif ()
     endif ()
     target_compile_options(libmultibase PRIVATE -Wall -Wextra -pedantic -Werror
             ${COVERAGE_FLAGS})
+endif ()
+
+if (BUILD_BENCHMARK)
+    find_package(benchmark CONFIG REQUIRED)
+    add_executable(multibase_benchmark benchmark/main.cpp)
+    target_link_libraries(multibase_benchmark PRIVATE
+            libmultibase benchmark::benchmark
+            benchmark::benchmark_main ${COVERAGE_FLAGS})
 endif ()
 
 if (BUILD_TESTING)

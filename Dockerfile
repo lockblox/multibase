@@ -7,10 +7,12 @@ RUN cd ${VCPKG_ROOT} \
  && git pull lockblox master \
  && ./vcpkg install boost-iterator \
  && ./vcpkg install boost-tokenizer \
- && ./vcpkg install boost-range
+ && ./vcpkg install boost-range \
+ && ./vcpkg install benchmark \
+ && rm -rf downloads buildtrees
 
 RUN cd ${VCPKG_ROOT} \
- && rm -rf downloads \
+ && mkdir -p buildtrees/chunx \
  && ./vcpkg install --head chunx
 
 COPY . /root/src
