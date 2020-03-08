@@ -6,6 +6,12 @@ namespace multibase {
 
 class algorithm {
  public:
+  /** Tag identifying algorithms which operate on blocks */
+  class block_tag {};
+
+  /** Tag identifying algorithms which operate on continuous data */
+  class stream_tag {};
+
   virtual ~algorithm() = default;
 
   /** Resets the algorithm */

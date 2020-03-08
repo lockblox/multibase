@@ -15,6 +15,8 @@ template <encoding T>
 struct traits {
   static const std::array<char, 0> charset;
   static const char name[];
+  static const char padding = 0;
+  using execution_style = algorithm::block_tag;
 };
 
 /** Template implementation of base encoding which computes a lookup table at
@@ -27,6 +29,9 @@ class basic_algorithm {
     size_t output_size() override;
     size_t block_size() override;
     std::string process(std::string_view input) override;
+
+   private:
+    constexpr size_t input_size() { return ratio.den; }
   };
 
   class decoder : public algorithm {
@@ -34,6 +39,9 @@ class basic_algorithm {
     size_t output_size() override;
     size_t block_size() override;
     std::string process(std::string_view input) override;
+
+   private:
+    constexpr size_t input_size() { return ratio.num; }
   };
 
  private:
@@ -69,6 +77,8 @@ class basic_algorithm {
   constexpr static auto ratio = std::ratio<log2(256), log2(radix)>{};
   /** Map from value to corresponding character in base encoding */
   static const std::array<unsigned char, 256> valset;
+
+  constexpr static auto base = T;
 };
 
 template <encoding T, typename Traits>
@@ -131,31 +141,48 @@ template <encoding T, typename Traits>
 std::string basic_algorithm<T, Traits>::encoder::process(
     std::string_view input) {
   std::string output;
-  assert(block_size());
-  output.resize(output_size() * input.size() / block_size());
-  auto ii = std::begin(input);
+  std::size_t isize = input.size();
+  auto partial_blocks = static_cast<float>(input.size()) / input_size();
+  auto num_blocks = static_cast<std::size_t>(partial_blocks);
+  auto osize = static_cast<size_t>(std::ceil(partial_blocks * output_size()));
+  if constexpr (std::is_same_v<typename Traits::execution_style, block_tag>) {
+    num_blocks = static_cast<size_t>(std::ceil(partial_blocks));
+    isize = input_size() * num_blocks;
+  }
+  output.resize(std::max(osize, (output_size() * num_blocks)));
+  auto input_it = std::begin(input);
   int length = 0;
-  for (auto end = std::end(input); ii != end; ++ii) {
-    int carry = static_cast<unsigned char>(*ii);
-    int i = 0;
+  for (std::size_t i = 0; i < isize; ++i, ++input_it) {
+    int carry = i > input.size() ? 0 : static_cast<unsigned char>(*input_it);
+    int j = 0;
     for (auto oi = output.rbegin();
-         (oi != output.rend()) && (carry != 0 || i < length); ++oi, ++i) {
+         (oi != output.rend()) && (carry != 0 || j < length); ++oi, ++j) {
       carry += 256 * (*oi);
       auto byte = (unsigned char*)(&(*oi));
       *byte = carry % radix;
       carry /= radix;
     }
-    length = i;
+    length = j;
   }
-  std::transform(output.begin(), output.end(), output.begin(),
+  std::transform(output.rbegin(), output.rend(), output.rbegin(),
                  [](auto c) { return Traits::charset[c]; });
-  output.erase(0, output.size() != output_size() ? output.size() - length : 0);
+  if constexpr (Traits::padding == 0) {
+    output.resize(osize);
+  } else {
+    auto pad_size = output.size() - osize;
+    output.replace(osize, pad_size, pad_size, Traits::padding);
+  }
+  if constexpr (std::is_same_v<typename Traits::execution_style, stream_tag>) {
+    output.erase(0, output.size() % output_size() ? output.size() - length : 0);
+  }
   return output;
 }
 
 template <encoding T, typename Traits>
 std::size_t basic_algorithm<T, Traits>::encoder::block_size() {
-  return ratio.den;
+  return std::is_same_v<typename Traits::execution_style, block_tag>
+             ? input_size()
+             : 0;
 }
 
 template <encoding T, typename Traits>
@@ -165,7 +192,9 @@ std::size_t basic_algorithm<T, Traits>::encoder::output_size() {
 
 template <encoding T, typename Traits>
 std::size_t basic_algorithm<T, Traits>::decoder::block_size() {
-  return ratio.num;
+  return std::is_same_v<typename Traits::execution_style, block_tag>
+             ? input_size()
+             : 0;
 }
 
 template <encoding T, typename Traits>
@@ -177,26 +206,43 @@ template <encoding T, typename Traits>
 std::string basic_algorithm<T, Traits>::decoder::process(
     std::string_view input) {
   std::string output;
-  assert(block_size());
-  output.resize(output_size() * input.size() / block_size());
-  auto ii = input.begin();
-  for (auto end = input.end(); ii != end && *ii; ++ii) {
-    int carry = valset[(unsigned char)(*ii)];
+  auto end = std::find(input.begin(), input.end(), Traits::padding);
+  size_t input_size = std::distance(input.begin(), end);
+  auto partial_blocks = static_cast<float>(input_size) / this->input_size();
+  auto output_size = static_cast<size_t>(this->output_size() * partial_blocks);
+  if constexpr (std::is_same_v<typename Traits::execution_style, block_tag>) {
+    std::size_t num_blocks = 0;
+    auto input_size_float = static_cast<float>(input.size());
+    num_blocks =
+        static_cast<size_t>(std::ceil(input_size_float / this->input_size()));
+    output.resize(this->output_size() * num_blocks);
+    input_size = this->input_size() * num_blocks;
+  } else {
+    output.resize(output_size);
+  }
+  auto input_it = input.begin();
+  for (size_t i = 0; i < input_size; ++i, ++input_it) {
+    int carry = i > input.size() || *input_it == Traits::padding
+                    ? 0
+                    : valset[(unsigned char)(*input_it)];
     if (carry == 255)
       throw std::invalid_argument(std::string{"Invalid input character "} +
-                                  *ii);
-    int i = output.size();
-    while (carry != 0 || i > 0) {
-      int index = i - 1;
+                                  *input_it);
+    auto j = output.size();
+    while (carry != 0 || j > 0) {
+      auto index = j - 1;
       carry += radix * static_cast<unsigned char>(output[index]);
       output[index] = static_cast<unsigned char>(carry % 256);
       carry /= 256;
       if (carry > 0 && index == 0) {
         output.insert(0, 1, 0);
       } else {
-        i = index;
+        j = index;
       }
     }
+  }
+  if constexpr (std::is_same_v<typename Traits::execution_style, block_tag>) {
+    output.erase(output_size, output.size());
   }
   return output;
 }
@@ -207,6 +253,8 @@ struct traits<encoding::base_16> {
       '0', '1', '2', '3', '4', '5', '6', '7',
       '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
   constexpr static const char name[] = "base_16";
+  using execution_style = algorithm::block_tag;
+  constexpr static const char padding = 0;
 };
 using base_16 = basic_algorithm<encoding::base_16>;
 
@@ -218,7 +266,38 @@ struct traits<encoding::base_58_btc> {
       'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm',
       'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
   constexpr static const char name[] = "base_58_btc";
+  using execution_style = algorithm::stream_tag;
+  constexpr static const char padding = 0;
 };
 using base_58_btc = basic_algorithm<encoding::base_58_btc>;
+
+template <>
+struct traits<encoding::base_64_pad> {
+  constexpr static const std::array<char, 64> charset = {
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+      'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+      'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
+  constexpr static const char name[] = "base_64_pad";
+  using execution_style = algorithm::block_tag;
+  constexpr static const char padding = '=';
+};
+using base_64_pad = basic_algorithm<encoding::base_64_pad>;
+
+template <>
+struct traits<encoding::base_64> {
+  constexpr static const std::array<char, 64> charset = {
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+      'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+      'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
+  constexpr static const char name[] = "base_64";
+  using base_64 = basic_algorithm<encoding::base_64>;
+  using execution_style = algorithm::block_tag;
+  constexpr static const char padding = 0;
+};
+using base_64 = basic_algorithm<encoding::base_64>;
 
 }  // namespace multibase

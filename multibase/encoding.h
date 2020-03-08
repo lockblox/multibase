@@ -12,7 +12,9 @@ enum class encoding : unsigned char {
   base_32 = 'b',
   base_32_upper = 'B',
   base_58_btc = 'Z',
-  base_64 = 'm'
+  base_64 = 'm',
+  base_64_pad = 'M'
+
 };
 
 }  // namespace multibase

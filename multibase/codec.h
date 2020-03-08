@@ -62,7 +62,7 @@ detail::range_type<InputIt> encode(InputIt first, InputIt last, encoding base,
                                    bool multiformat) {
   auto encoder = detail::encoder(base);
   if (encoder == nullptr) throw std::invalid_argument("Unsupported base");
-  auto block_size = base == encoding::base_58_btc ? 0 : encoder->block_size();
+  auto block_size = encoder->block_size();
   detail::function_type f = [encoder = std::move(encoder), multiformat,
                              base](auto input) mutable {
     std::string result;
@@ -94,12 +94,8 @@ detail::range_type<InputIt> decode(InputIt first, InputIt last, encoding base) {
     ++first;
   }
   auto decoder = detail::decoder(base);
-  if (decoder == nullptr) {
-    auto msg = "Unsupported base";
-    msg += static_cast<std::underlying_type_t<encoding>>(base);
-    throw std::invalid_argument(msg);
-  }
-  auto block_size = base == encoding::base_58_btc ? 0 : decoder->block_size();
+  if (decoder == nullptr) throw std::invalid_argument("Unsupported base");
+  auto block_size = decoder->block_size();
   detail::function_type f =
       [decoder = std::move(decoder)](std::string_view input) -> std::string {
     return decoder->process(input);

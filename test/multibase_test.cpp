@@ -56,6 +56,14 @@ INSTANTIATE_TEST_SUITE_P(
         data{multibase::encoding::base_256,
              {1, 2, 4, 8, 16, 127, -13},
              {0, 1, 2, 4, 8, 16, 127, -13},
+             true},
+        data{multibase::encoding::base_64,
+             {'e', 'l', 'e', 'p', 'h', 'a', 'n', 't'},
+             "mZWxlcGhhbnQ",
+             true},
+        data{multibase::encoding::base_64_pad,
+             {'e', 'l', 'e', 'p', 'h', 'a', 'n', 't'},
+             "MZWxlcGhhbnQ=",
              true}));
 
 }  // namespace test
