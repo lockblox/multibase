@@ -1,7 +1,5 @@
 #pragma once
 
-#include <chunx/join.h>
-#include <chunx/variable_length_policy.h>
 #include <multibase/algorithm.h>
 #include <multibase/encoding.h>
 
@@ -11,26 +9,13 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <range/v3/view/chunk.hpp>
+#include <range/v3/view/join.hpp>
+#include <range/v3/view/subrange.hpp>
+#include <range/v3/view/take.hpp>
+#include <range/v3/view/transform.hpp>
 
 namespace multibase::detail {
-
-using function_type = std::function<std::string(std::string_view)>;
-
-template <typename InputIt>
-using chunker_type = boost::tokenizer<chunx::variable_length_policy<InputIt>,
-                                      InputIt, std::string>;
-
-template <typename InputIt>
-using chunk_iterator = typename chunker_type<InputIt>::iterator;
-
-template <typename InputIt>
-using transform_iterator =
-    boost::transform_iterator<function_type, chunk_iterator<InputIt>>;
-
-template <typename InputIt>
-using range_type = decltype(chunx::join<transform_iterator<InputIt>>(
-    std::declval<transform_iterator<InputIt>>(),
-    std::declval<transform_iterator<InputIt>>()));
 
 std::shared_ptr<algorithm> encoder(encoding base);
 std::shared_ptr<algorithm> decoder(encoding base);
@@ -40,55 +25,49 @@ std::shared_ptr<algorithm> decoder(encoding base);
 namespace multibase {
 
 template <typename InputIt>
-detail::range_type<InputIt> encode(InputIt first, InputIt last, encoding base,
-                                   bool multiformat = true);
+auto encode(InputIt first, InputIt last, encoding base,
+            bool multiformat = true);
 
 template <typename Range>
-detail::range_type<typename boost::range_iterator<Range>::type> encode(
-    Range& input, encoding base, bool multiformat = true);
+auto encode(Range& input, encoding base, bool multiformat = true);
 
 template <typename InputIt>
-detail::range_type<InputIt> decode(InputIt first, InputIt last,
-                                   encoding base = encoding::base_unknown);
+auto decode(InputIt first, InputIt last,
+            encoding base = encoding::base_unknown);
 
 template <typename Range>
-detail::range_type<typename boost::range_iterator<Range>::type> decode(
-    Range& input, encoding base = encoding::base_unknown);
+auto decode(Range& input, encoding base = encoding::base_unknown);
 
 /** IMPLEMENTATION */
 
 template <typename InputIt>
-detail::range_type<InputIt> encode(InputIt first, InputIt last, encoding base,
-                                   bool multiformat) {
+auto encode(InputIt first, InputIt last, encoding base, bool multiformat) {
   auto encoder = detail::encoder(base);
   if (encoder == nullptr) throw std::invalid_argument("Unsupported base");
   auto block_size = encoder->block_size();
-  detail::function_type f = [encoder = std::move(encoder), multiformat,
-                             base](auto input) mutable {
+  block_size = block_size == 0 ? std::distance(first, last) : block_size;
+  auto fn = [encoder = std::move(encoder), multiformat,
+             base](const auto& input) mutable {
     std::string result;
     if (multiformat) {
       multiformat = false;
       result = std::string{static_cast<char>(base)};
     }
-    result += encoder->process(input);
+    auto input_view = std::string_view{std::data(input), std::size(input)};
+    result += encoder->process(input_view);
     return result;
   };
-  auto p = chunx::variable_length_policy<InputIt>{block_size};
-  auto chunker = detail::chunker_type<InputIt>{first, last, p};
-  auto begin =
-      detail::transform_iterator<InputIt>{chunker.begin(), std::move(f)};
-  auto end = detail::transform_iterator<InputIt>{chunker.end()};
-  return chunx::join(begin, end);
+  return ranges::subrange(first, last) | ranges::views::chunk(block_size) |
+         ranges::views::transform(fn) | ranges::views::join;
 }
 
 template <typename Range>
-detail::range_type<typename boost::range_iterator<Range>::type> encode(
-    Range& input, encoding base, bool multiformat) {
-  return encode(input.begin(), input.end(), base, multiformat);
+auto encode(Range& input, encoding base, bool multiformat) {
+  return encode(begin(input), end(input), base, multiformat);
 }
 
 template <typename InputIt>
-detail::range_type<InputIt> decode(InputIt first, InputIt last, encoding base) {
+auto decode(InputIt first, InputIt last, encoding base) {
   if (base == encoding::base_unknown && first != last) {
     base = static_cast<encoding>(*first);
     ++first;
@@ -96,22 +75,18 @@ detail::range_type<InputIt> decode(InputIt first, InputIt last, encoding base) {
   auto decoder = detail::decoder(base);
   if (decoder == nullptr) throw std::invalid_argument("Unsupported base");
   auto block_size = decoder->block_size();
-  detail::function_type f =
-      [decoder = std::move(decoder)](std::string_view input) -> std::string {
-    return decoder->process(input);
+  block_size = block_size == 0 ? std::distance(first, last) : block_size;
+  auto fn = [decoder = std::move(decoder)](const auto& input) {
+    auto input_view = std::string_view{std::data(input), std::size(input)};
+    return decoder->process(input_view);
   };
-  auto p = chunx::variable_length_policy<InputIt>{block_size};
-  auto chunker = detail::chunker_type<InputIt>{first, last, p};
-  auto begin =
-      detail::transform_iterator<InputIt>{chunker.begin(), std::move(f)};
-  auto end = detail::transform_iterator<InputIt>{chunker.end()};
-  return chunx::join(begin, end);
+  return ranges::subrange(first, last) | ranges::views::chunk(block_size) |
+         ranges::views::transform(fn) | ranges::views::join;
 }
 
 template <typename Range>
-typename detail::range_type<typename boost::range_iterator<Range>::type> decode(
-    Range& input, encoding base) {
-  return decode(input.begin(), input.end(), base);
+auto decode(Range& input, encoding base) {
+  return decode(std::begin(input), std::end(input), base);
 }
 
 }  // namespace multibase

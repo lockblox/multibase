@@ -3,6 +3,7 @@
 #include <multibase/codec.h>
 
 #include <iomanip>
+#include <range/v3/to_container.hpp>
 
 namespace test {
 
@@ -17,20 +18,23 @@ class codec : public testing::TestWithParam<data> {};
 
 TEST_P(codec, encoding) {
   auto data = GetParam();
-  auto result = multibase::encode(data.input, data.base, data.multiformat);
+  auto result = multibase::encode(data.input, data.base, data.multiformat) |
+                ranges::to<std::string>();
   EXPECT_THAT(result, ::testing::Eq(data.expected));
 }
 
 TEST_P(codec, decoding) {
+  using ::testing::ElementsAreArray;
   auto data = GetParam();
   auto base = data.multiformat ? multibase::encoding::base_unknown : data.base;
-  auto result = multibase::decode(data.expected, base);
-  EXPECT_THAT(result, ::testing::Eq(data.input));
+  auto output = multibase::decode(data.expected, base);
+  EXPECT_THAT(output | ranges::to<std::string>(), ElementsAreArray(data.input));
 }
 
 TEST(Multibase, InvalidCharacters) {
   auto input = std::string("Z\\=+BpKd9UKM");
-  EXPECT_THROW(multibase::decode(input), std::invalid_argument);
+  auto output = multibase::decode(input);
+  EXPECT_THROW(output | ranges::to<std::string>(), std::invalid_argument);
 }
 
 INSTANTIATE_TEST_SUITE_P(

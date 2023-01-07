@@ -6,8 +6,8 @@ option(BUILD_TESTING "Build unit tests" ON)
 option(BUILD_COVERAGE "Build with coverage" OFF)
 option(BUILD_BENCHMARK "Build benchmark" OFF)
 
-find_package(chunx CONFIG REQUIRED)
 find_package(Boost REQUIRED)
+find_package(range-v3 REQUIRED)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -31,7 +31,6 @@ target_include_directories(libmultibase PUBLIC
         $<BUILD_INTERFACE:${Boost_INCLUDE_DIRS}>
         $<INSTALL_INTERFACE:include>)
 set_target_properties(libmultibase PROPERTIES OUTPUT_NAME multibase)
-target_link_libraries(libmultibase PUBLIC libchunx)
 
 add_executable(multibase multibase/main.cpp)
 target_link_libraries(multibase libmultibase)
