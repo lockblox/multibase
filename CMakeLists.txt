@@ -1,4 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
+
+set(CMAKE_TOOLCHAIN_FILE
+        "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
 
 project(multibase VERSION 1.0 LANGUAGES CXX)
 
@@ -11,7 +15,7 @@ find_package(range-v3 REQUIRED)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(libmultibase
@@ -81,8 +85,8 @@ endif ()
 if (BUILD_TESTING)
     enable_testing()
     find_package(GTest MODULE REQUIRED)
-    add_executable(multibase_test test/multibase_test.cpp test/main.cpp)
-    target_link_libraries(multibase_test PRIVATE libmultibase GTest::GTest GTest::Main)
+    add_executable(multibase_test test/multibase_test.cpp)
+    target_link_libraries(multibase_test PRIVATE libmultibase GTest::gmock_main)
     set_target_properties(multibase_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY
             ${CMAKE_CURRENT_BINARY_DIR})
     gtest_discover_tests(multibase_test)
