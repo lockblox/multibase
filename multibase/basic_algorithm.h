@@ -27,10 +27,6 @@ class basic_algorithm {
  public:
   static constexpr multibase::encoding encoding{T};
 
-  // todo c api wrapper functions - what if input non-null terminated
-  // static size_t decode(char *out, const char *src, size_t srclen);
-  // static size_t encode(char* dest, const char* str, size_t len);
-
   template <std::ranges::input_range InputRange,
             std::output_iterator<char> OutputIt>
   static OutputIt encode(const InputRange& input, OutputIt output) {
@@ -48,11 +44,9 @@ class basic_algorithm {
   // round
 
   // required to enforce a non chunked encoding for c strings
-  /*
   static std::string encode(const unsigned char* input, std::size_t len) {
     return encode(ranges::subrange(input, std::next(input, len)));
   }
-   */
 
   template <std::input_iterator FirstIt, std::input_iterator LastIt,
             std::output_iterator<char> OutputIt>
@@ -83,8 +77,21 @@ class basic_algorithm {
   }
 
   template <std::ranges::input_range range>
+  static std::size_t count_leading_zeros(const range& chunk) {
+    return static_cast<std::size_t>(std::distance(
+        std::begin(chunk),
+        std::ranges::find_if(chunk, [](auto ch) { return decode(ch) != 0; })));
+  }
+
+  template <std::ranges::input_range range>
   static std::size_t decoded_size(const range& chunk) {
-    return decoded_size(std::size(chunk));
+    if constexpr (is_chunkable()) {
+      return decoded_size(std::size(chunk));
+    }
+    else {
+      auto zeros = count_leading_zeros(chunk);
+      return zeros + decoded_size(std::size(chunk) - zeros);
+    }
   }
 
   static constexpr std::size_t decoded_size(std::size_t len) {
@@ -92,6 +99,7 @@ class basic_algorithm {
       return static_cast<std::size_t>(
           decoded_chunk_size * std::ceil(1.0 * len / encoded_chunk_size));
     } else {
+      // need to include number of zeros here
       return static_cast<std::size_t>(
                  std::ceil(len * std::log(radix) / std::log(256.0))) +
              1;
@@ -127,7 +135,7 @@ class basic_algorithm {
     auto elem = std::begin(chunk);
     auto len = std::size_t{0};
     // zero can be represented by a single 0 value in all bases
-    // this means we can count  and prepend
+    // this means we can count and prepend
     auto leading_zeroes = std::size_t{0};
     auto all_zeroes = true;
     for (int i = 0; i < input_size; ++i) {
@@ -137,6 +145,8 @@ class basic_algorithm {
           all_zeroes = false;
         } else if (all_zeroes) {
           ++leading_zeroes;
+          ++elem;
+          continue;
         }
         carry = *elem++;
       }
@@ -163,9 +173,9 @@ class basic_algorithm {
     auto offset = std::size_t{0};
     if constexpr (!is_chunkable()) {
       offset = output.size() - std::min(output.size(), len);
-      std::advance(data, offset);
-    }
-    if constexpr (Traits::padding == 0) {
+      std::advance(data, offset - std::min(offset, leading_zeroes));
+      len = unpadded_size - offset + leading_zeroes;
+    } else if constexpr (Traits::padding == 0) {
       len = unpadded_size - offset;
     } else {
       len = output.size() - offset;
@@ -181,14 +191,15 @@ class basic_algorithm {
     }
     if constexpr (!Traits::is_case_sensitive) {
       switch (Traits::encoding_case) {
-        case encoding_case::lower:
+        using enum multibase::encoding_case;
+        case lower:
           ch = static_cast<char>(std::tolower(ch));
           break;
-        case encoding_case::upper:
+        case upper:
           ch = static_cast<char>(std::toupper(ch));
           break;
-        case encoding_case::both:
-        case encoding_case::none:
+        case both:
+        case none:
           break;
       }
     }
@@ -205,7 +216,6 @@ class basic_algorithm {
                                          std::span<unsigned char> output) {
     auto first = std::begin(chunk);
     auto last = std::end(chunk);
-    // todo fix leading zeros on non chunkable, trailing zeros on padded
     std::size_t length = 0;
     std::size_t leading_zeroes = 0;
     std::size_t non_zeroes = 0;
@@ -283,38 +293,6 @@ class basic_algorithm {
     }
     return true;
   };
-
-  /*
-  template <std::ranges::range range>
-  static std::string_view decode(const range& chunk, std::span<char> output) {
-    static_assert(decoded_chunk_size < 254, "Radix too large");
-    std::ranges::fill(output, static_cast<unsigned char>(0));
-    auto input_size = 0;
-    auto elem = std::begin(chunk);
-    for (int i = 0; i < std::size(chunk); ++i) {
-      int carry = 0;
-      if (elem != std::end(chunk) && *elem != Traits::padding) {
-        carry = valset[(unsigned char)(*elem++)];
-        ++input_size;
-      } else {
-        continue;
-      }
-      if (carry == 255) {
-        throw std::invalid_argument(std::string{"Invalid input character "} +
-                                    *elem);
-      }
-      [[maybe_unused]] auto _ =
-          std::for_each(std::rbegin(output), std::prev(std::rend(output)),
-                        [&carry](auto& out_val) {
-                          carry += radix * out_val;
-                          out_val = static_cast<unsigned char>(carry % 256);
-                          carry /= 256;
-                        });
-    }
-    // assert(input_size <= encoded_chunk_size);
-    return std::string_view{output.data(), output.size()};
-  }
-   */
 
  private:
   using CharsetT = decltype(Traits::alphabet);
@@ -399,117 +377,5 @@ class basic_algorithm {
 
   constexpr static auto base = T;
 };
-
-/*
-template <encoding T, typename Traits>
-std::string basic_algorithm<T, Traits>::encoder::process(
-    std::string_view input) {
-  std::string output;
-  std::size_t isize = input.size();
-  auto partial_blocks = static_cast<float>(input.size()) / input_size();
-  auto num_blocks = static_cast<std::size_t>(partial_blocks);
-  auto osize = static_cast<size_t>(std::ceil(partial_blocks * output_size()));
-  if constexpr (std::is_same_v<typename Traits::execution_style, block_tag>) {
-    num_blocks = static_cast<size_t>(std::ceil(partial_blocks));
-    isize = input_size() * num_blocks;
-  }
-  output.resize(std::max(osize, (output_size() * num_blocks)));
-  auto input_it = std::begin(input);
-  int length = 0;
-  for (std::size_t i = 0; i < isize; ++i, ++input_it) {
-    int carry = i > input.size() ? 0 : static_cast<unsigned char>(*input_it);
-    int j = 0;
-    for (auto oi = output.rbegin();
-         (oi != output.rend()) && (carry != 0 || j < length); ++oi, ++j) {
-      carry += 256 * (*oi);
-      auto byte = (unsigned char*)(std::to_address(oi));
-      *byte = carry % radix;
-      carry /= radix;
-    }
-    length = j;
-  }
-  std::transform(output.rbegin(), output.rend(), output.rbegin(),
-                 [](auto c) { return Traits::alphabet[c]; });
-  if constexpr (Traits::padding == 0) {
-    output.resize(osize);
-  } else {
-    auto pad_size = output.size() - osize;
-    output.replace(osize, pad_size, pad_size, Traits::padding);
-  }
-  if constexpr (std::is_same_v<typename Traits::execution_style, stream_tag>) {
-    output.erase(0, output.size() % output_size() ? output.size() - length : 0);
-  }
-  return output;
-}
-
-template <encoding T, typename Traits>
-std::size_t basic_algorithm<T, Traits>::encoder::block_size() {
-  return std::is_same_v<typename Traits::execution_style, block_tag>
-             ? input_size()
-             : 0;
-}
-
-template <encoding T, typename Traits>
-std::size_t basic_algorithm<T, Traits>::encoder::output_size() {
-  return encoded_chunk_size;
-}
-
-template <encoding T, typename Traits>
-std::size_t basic_algorithm<T, Traits>::decoder::block_size() {
-  return std::is_same_v<typename Traits::execution_style, block_tag>
-             ? input_size()
-             : 0;
-}
-
-template <encoding T, typename Traits>
-std::size_t basic_algorithm<T, Traits>::decoder::output_size() {
-  return decoded_chunk_size;
-}
-
-template <encoding T, typename Traits>
-std::string basic_algorithm<T, Traits>::decoder::process(
-    std::string_view input) {
-  std::string output;
-  auto end = std::ranges::find(input, Traits::padding);
-  size_t input_size = std::distance(input.begin(), end);
-  auto partial_blocks = static_cast<float>(input_size) / this->input_size();
-  auto output_size = static_cast<size_t>(this->output_size() * partial_blocks);
-  if constexpr (std::is_same_v<typename Traits::execution_style, block_tag>) {
-    std::size_t num_blocks = 0;
-    auto input_size_float = static_cast<float>(input.size());
-    num_blocks =
-        static_cast<size_t>(std::ceil(input_size_float / this->input_size()));
-    output.resize(this->output_size() * num_blocks);
-    input_size = this->input_size() * num_blocks;
-  } else {
-    output.resize(output_size);
-  }
-  auto input_it = input.begin();
-  for (size_t i = 0; i < input_size; ++i, ++input_it) {
-    int carry = i > input.size() || *input_it == Traits::padding
-                    ? 0
-                    : valset[(unsigned char)(*input_it)];
-    if (carry == 255)
-      throw std::invalid_argument(std::string{"Invalid input character "} +
-                                  *input_it);
-    auto j = output.size();
-    while (carry != 0 || j > 0) {
-      auto index = j - 1;
-      carry += radix * static_cast<unsigned char>(output[index]);
-      output[index] = static_cast<unsigned char>(carry % 256);
-      carry /= 256;
-      if (carry > 0 && index == 0) {
-        output.insert(0, 1, 0);
-      } else {
-        j = index;
-      }
-    }
-  }
-  if constexpr (std::is_same_v<typename Traits::execution_style, block_tag>) {
-    output.erase(output_size, output.size());
-  }
-  return output;
-}
- */
 
 }  // namespace multibase

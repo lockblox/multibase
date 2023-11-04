@@ -10,12 +10,13 @@ option(BUILD_TESTING "Build unit tests" ON)
 option(BUILD_COVERAGE "Build with coverage" OFF)
 option(BUILD_BENCHMARK "Build benchmark" OFF)
 
-find_package(Boost REQUIRED)
-find_package(range-v3 REQUIRED)
+find_package(Microsoft.GSL CONFIG REQUIRED)
+find_package(range-v3 CONFIG REQUIRED)
+find_package(magic_enum CONFIG REQUIRED)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(libmultibase
@@ -28,13 +29,19 @@ add_library(libmultibase
         multibase/identity_algorithm.cpp
         multibase/identity_algorithm.h
         multibase/algorithm.cpp
-        multibase/algorithm.h)
+        multibase/algorithm.h
+        multibase/encoding_case.hpp
+        multibase/encoding_metadata.hpp
+        multibase/encoding_metadata.cpp
+        multibase/encoding_traits.hpp
+        multibase/log.h
+        multibase/encoding_case.cpp)
 
 target_include_directories(libmultibase PUBLIC
         $<BUILD_INTERFACE:${multibase_SOURCE_DIR}>
-        $<BUILD_INTERFACE:${Boost_INCLUDE_DIRS}>
         $<INSTALL_INTERFACE:include>)
 set_target_properties(libmultibase PROPERTIES OUTPUT_NAME multibase)
+target_link_libraries(libmultibase magic_enum::magic_enum range-v3::range-v3 Microsoft.GSL::GSL)
 
 add_executable(multibase multibase/main.cpp)
 target_link_libraries(multibase libmultibase)
@@ -74,15 +81,13 @@ else ()
             ${COVERAGE_FLAGS})
 endif ()
 
-if (BUILD_BENCHMARK)
+if (BUILD_TESTING)
     find_package(benchmark CONFIG REQUIRED)
     add_executable(multibase_benchmark benchmark/main.cpp)
     target_link_libraries(multibase_benchmark PRIVATE
             libmultibase benchmark::benchmark
             benchmark::benchmark_main ${COVERAGE_FLAGS})
-endif ()
 
-if (BUILD_TESTING)
     enable_testing()
     find_package(GTest MODULE REQUIRED)
     add_executable(multibase_test test/multibase_test.cpp)
