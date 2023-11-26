@@ -10,6 +10,7 @@
 #include <format>
 #include <functional>
 #include <magic_enum.hpp>
+#include <gsl/assert>
 #include <map>
 #include <memory>
 #include <range/v3/view/chunk.hpp>
@@ -27,9 +28,7 @@ std::shared_ptr<algorithm> decoder(encoding base);
 
 namespace multibase {
 
-class codec {
-
-};
+class codec {};
 
 template <std::ranges::input_range range>
 std::string encode(const range& input, encoding base, bool multiformat = true);
@@ -89,7 +88,8 @@ std::string encode(const range& input, encoding base, bool multiformat) {
   switch (base) {
     using enum multibase::encoding;
     case base_none:
-      return std::string{std::begin(input), std::end(input)};
+      return static_cast<std::underlying_type_t<multibase::encoding>>(base) +
+             std::string{std::begin(input), std::end(input)};
     case base_2:
       return encode<multibase::base_2>(input, multiformat);
     case base_8:
@@ -198,7 +198,7 @@ std::vector<unsigned char> decode(const range& input, encoding base) {
 
 template <std::ranges::input_range range>
 std::vector<unsigned char> decode(const range& input) {
-  // Expect(std::size(input) > 0);
+  Expects(std::size(input) > 0);
   auto first = std::begin(input);
   auto last = std::end(input);
   auto base = magic_enum::enum_cast<encoding>(*first);

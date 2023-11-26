@@ -3,7 +3,11 @@
 #include <multibase/basic_algorithm.h>
 #include <multibase/codec.h>
 
+#include <algorithm>
+#include <climits>
+#include <functional>
 #include <iomanip>
+#include <random>
 #include <range/v3/range/conversion.hpp>
 #include <vector>
 
@@ -90,22 +94,41 @@ TEST(Multibase, BlockSize) {
 
   EXPECT_THAT(multibase::base_58_btc::encoded_size("elephant"), 13);
   EXPECT_THAT(multibase::base_58_btc::encode("elephant"), "2HstAjsCYPZyH");
-
   std::string output;
-  output.resize(11);
-  multibase::base_64::encode("elephant", output.data());
-  EXPECT_THAT(output, "ZWxlcGhhbnQ");
+  multibase::base_58_btc::encode("elephant", std::back_inserter(output));
+  EXPECT_THAT(output, "2HstAjsCYPZyH");
+
+  output.resize(12);
+  multibase::base_64::encode("elephant", std::span{output});
+  EXPECT_THAT(output, "ZWxlcGhhbnQA");  // includes null terminator 0 => A
   output.clear();
   multibase::base_64::encode("elephant", std::back_inserter(output));
+  EXPECT_THAT(output, "ZWxlcGhhbnQA");
+  output.clear();
+  multibase::base_64::encode(std::string{"elephant"},
+                             std::back_inserter(output));
   EXPECT_THAT(output, "ZWxlcGhhbnQ");
 
   output.clear();
-  //multibase::base_64::decode("ZWxlcGhhbnQ", std::back_inserter(output));
-  //EXPECT_THAT(output, "elephant");
+  multibase::base_64::decode("ZWxlcGhhbnQ", std::back_inserter(output));
+  EXPECT_THAT(output, "elephant");
 
   EXPECT_THAT(multibase::log2(58), 5);
   EXPECT_THAT(multibase::log2(64), 6);
   EXPECT_THAT(multibase::log2(256), 8);
+}
+
+TEST(Multibase, RandomData) {
+  std::random_device rd;
+  auto random_char = [&rd]() { return static_cast<unsigned char>(rd()); };
+  std::vector<unsigned char> data(std::rand() % 4097);
+  std::generate(begin(data), end(data), random_char);
+  magic_enum::enum_for_each<multibase::encoding>(
+      [&](multibase::encoding enum_val) {
+        auto encoded = multibase::encode(data, enum_val);
+        auto decoded = multibase::decode(encoded);
+        EXPECT_THAT(decoded, data);
+      });
 }
 
 INSTANTIATE_TEST_SUITE_P(

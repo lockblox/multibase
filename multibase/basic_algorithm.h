@@ -27,37 +27,23 @@ class basic_algorithm {
  public:
   static constexpr multibase::encoding encoding{T};
 
+  // TODO separate declaration and definition
+
   template <std::ranges::input_range InputRange,
             std::output_iterator<char> OutputIt>
   static OutputIt encode(const InputRange& input, OutputIt output) {
-    static_assert(is_chunkable());
-    auto chunk_output = std::array<char, encoded_chunk_size>{};
-    auto func = [&](auto chunk) { return encode(chunk, chunk_output); };
-    auto output_view = input | ranges::views::chunk(decoded_chunk_size) |
-                       ranges::views::transform(func) | ranges::views::join;
-    std::ranges::copy_if(output_view, output,
-                         [](auto val) { return val != 0; });
+    if constexpr (is_chunkable()) {
+      auto chunk_output = std::array<char, encoded_chunk_size>{};
+      auto func = [&](auto chunk) { return encode(chunk, chunk_output); };
+      auto output_view = input | ranges::views::chunk(decoded_chunk_size) |
+                         ranges::views::transform(func) | ranges::views::join;
+      std::ranges::copy_if(output_view, output,
+                           [](auto val) { return val != 0; });
+    } else {
+      auto buf = encode(input);
+      std::ranges::copy(buf, output);
+    }
     return output;
-  }
-
-  // TODO make non-random access ranges a special case rather than the other way
-  // round
-
-  // required to enforce a non chunked encoding for c strings
-  static std::string encode(const unsigned char* input, std::size_t len) {
-    return encode(ranges::subrange(input, std::next(input, len)));
-  }
-
-  template <std::input_iterator FirstIt, std::input_iterator LastIt,
-            std::output_iterator<char> OutputIt>
-  static OutputIt encode(FirstIt first, LastIt last, OutputIt output) {
-    return encode(ranges::subrange(first, last), output);
-  }
-
-  template <std::output_iterator<char> OutputIt>
-  static OutputIt encode(const char* input, OutputIt output) {
-    auto len = strlen(input);
-    return encode(ranges::subrange(input, std::next(input, len)), output);
   }
 
   template <std::ranges::input_range range>
@@ -87,8 +73,7 @@ class basic_algorithm {
   static std::size_t decoded_size(const range& chunk) {
     if constexpr (is_chunkable()) {
       return decoded_size(std::size(chunk));
-    }
-    else {
+    } else {
       auto zeros = count_leading_zeros(chunk);
       return zeros + decoded_size(std::size(chunk) - zeros);
     }
@@ -214,6 +199,7 @@ class basic_algorithm {
   template <std::ranges::input_range range>
   static std::span<unsigned char> decode(const range& chunk,
                                          std::span<unsigned char> output) {
+    std::ranges::fill(output, static_cast<unsigned char>(0));
     auto first = std::begin(chunk);
     auto last = std::end(chunk);
     std::size_t length = 0;
@@ -243,7 +229,6 @@ class basic_algorithm {
         *rfirst = static_cast<unsigned char>(carry % 256);
         carry /= 256;
       }
-      assert(carry == 0);
       length = j;
     }
     auto non_zero =
@@ -262,28 +247,27 @@ class basic_algorithm {
   }
 
   /** Decoders */
-  /*
-    template <std::ranges::range InputRange, std::output_iterator<char>
-    OutputIt> static OutputIt decode(const InputRange& input, OutputIt output) {
-      static_assert(is_chunkable());
-      auto chunk_output = std::array<char, decoded_chunk_size>{};
-      auto func = [&](const auto& chunk) { return decode(chunk, chunk_output);
-    }; auto output_view = input | ranges::views::chunk(encoded_chunk_size) |
-                         ranges::views::transform(func) | ranges::views::join;
-      std::ranges::copy_if(output_view, output,
-                           [](auto val) { return val != 0; });
-      return output;
-    }
-    */
 
-  /*
-  template <std::output_iterator<char> OutputIt>
-  static OutputIt decode(const char* input, OutputIt output) {
-    auto len = static_cast<long long>(
-        strnlen(input, std::numeric_limits<long long>::max()));
-    return decode(ranges::subrange(input, std::next(input, len)), output);
+  template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
+  static OutputIt decode(const range& input, OutputIt output) {
+    static_assert(is_chunkable());
+    auto chunk_output = std::array<unsigned char, decoded_chunk_size>{};
+    auto func = [&](const auto& chunk) { return decode(chunk, chunk_output); };
+    auto output_view = input | ranges::views::chunk(encoded_chunk_size) |
+                       ranges::views::transform(func) | ranges::views::join;
+    std::ranges::copy(output_view, output);
+    return output;
   }
-   */
+
+  template <std::ranges::input_range range>
+  static std::string decode(const range& input) {
+    auto output = std::string(decoded_size(input), 0);
+    auto view = decode(input, std::span{output.data(), output.size()});
+    std::ranges::copy(view, std::begin(output));
+    output.resize(std::size(view));
+    return output;
+  }
+
 
   consteval static bool is_chunkable() {
     for (auto i = radix; i > 1; i /= 2) {
