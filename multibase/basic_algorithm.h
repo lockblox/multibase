@@ -58,7 +58,7 @@ class basic_algorithm {
   }
 
   /** Determine the character encoding for a given value
-  @return character encoding, or 0 if none such encoding exists */
+  @return character encoding, or xFF if none such encoding exists */
   constexpr static unsigned char getval(unsigned char p) noexcept {
     return find(first, last, p) == last
                ? static_cast<unsigned char>(255)
@@ -153,7 +153,7 @@ std::string basic_algorithm<T, Traits>::encoder::process(
   auto input_it = std::begin(input);
   int length = 0;
   for (std::size_t i = 0; i < isize; ++i, ++input_it) {
-    int carry = i > input.size() ? 0 : static_cast<unsigned char>(*input_it);
+    int carry = i >= input.size() ? 0 : static_cast<unsigned char>(*input_it);
     int j = 0;
     for (auto oi = output.rbegin();
          (oi != output.rend()) && (carry != 0 || j < length); ++oi, ++j) {
