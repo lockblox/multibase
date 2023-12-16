@@ -2,13 +2,11 @@
   "name": "multibase",
   "version": "0.1.0",
   "dependencies": [
-    "boost-iterator",
-    "boost-tokenizer",
-    "boost-range",
     "benchmark",
     "gtest",
     "range-v3",
     "magic-enum",
-    "ms-gsl"
+    "ms-gsl",
+    "fmt"
   ]
 }

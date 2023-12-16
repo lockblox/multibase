@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <multibase/encoding_case.hpp>
+#include <multibase/log.hpp>

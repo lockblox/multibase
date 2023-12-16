@@ -1,0 +1,6 @@
+WarningsAsErrors: '*'
+HeaderFilterRegex: ''
+FormatStyle: 'file'
+CheckOptions:
+  - key:             readability-identifier-length.IgnoredVariableNames
+    value:           '(_)|(ch)'

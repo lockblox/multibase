@@ -1,17 +1,51 @@
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-#include <multibase/basic_algorithm.h>
-#include <multibase/codec.h>
+// Copyright 2023 Lockblox
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <algorithm>
-#include <climits>
-#include <functional>
-#include <iomanip>
-#include <random>
-#include <range/v3/range/conversion.hpp>
-#include <vector>
+#pragma warning(disable : 4068)
+#pragma warning(disable : 6326)
+#pragma clang diagnostic ignored "-Wexit-time-destructors"
+#pragma clang diagnostic ignored "-Wglobal-constructors"
 
-#include "multibase/encoding_metadata.hpp"
+#include <fmt/core.h>  // for format
+#include <span>        // for span
+
+#include <algorithm>    // for copy, generate, __fo...
+#include <cctype>       // for tolower, toupper
+#include <cstdlib>      // for rand, size_t
+#include <functional>   // for identity
+#include <iostream>     // for operator<<, ostream
+#include <iterator>     // for back_insert_iterator
+#include <limits>       // for numeric_limits
+#include <random>       // for random_device
+#include <stdexcept>    // for invalid_argument
+#include <string>       // for basic_string, string
+#include <string_view>  // for operator<<
+#include <vector>       // for allocator, vector
+
+#include <magic_enum.hpp>                        // for enum_name
+#include <magic_enum_utility.hpp>                // for enum_for_each
+#include <range/v3/iterator/basic_iterator.hpp>  // for operator!=
+#include <range/v3/range_fwd.hpp>                // for cardinality
+#include <range/v3/view/view.hpp>                // for operator|
+#include "gmock/gmock.h"                         // for MakePredicateFormatt...
+#include "gtest/gtest.h"                         // for Test, TestInfo (ptr ...
+
+#include <multibase/codec.hpp>              // for decode, base_64, encode
+#include <multibase/encoding.hpp>           // for encoding
+#include <multibase/encoding_case.hpp>      // for encoding_case
+#include <multibase/encoding_metadata.hpp>  // for encoding_metadata
+#include <multibase/log.hpp>                // for log2
 
 namespace test {
 
@@ -19,33 +53,34 @@ struct encoded_testcase {
   multibase::encoding base;
   std::string encoded;
   bool multiformat{true};
-};
+} __attribute__((aligned(64)));  // NOLINT
 
 struct testcase {
   std::string name;
   std::vector<unsigned char> decoded;
   std::vector<encoded_testcase> encodings;
-};
+} __attribute__((aligned(128)));  // NOLINT
 
-std::ostream& operator<<(std::ostream& os, const testcase& t_testcase) {
+static std::ostream& operator<<(std::ostream& os, const testcase& t_testcase) {
   os << t_testcase.name;
   return os;
 }
 
 class codec : public testing::TestWithParam<testcase> {};
 
+// cppcheck-suppress syntaxError
 TEST_P(codec, encoding) {
   const auto& testcase = GetParam();
   std::ranges::for_each(testcase.encodings, [&](const auto& encoded_data) {
     auto metadata = multibase::encoding_metadata{encoded_data.base};
     auto encoded = encoded_data.encoded;
     if (!metadata.is_case_sensitive()) {
-      if (metadata.encoding_case() == multibase::encoding_case::lower) {
+      if (metadata.type_case() == multibase::encoding_case::lower) {
         std::ranges::transform(encoded, encoded.begin(),
-                               [](auto ch) { return std::tolower(ch); });
-      } else if (metadata.encoding_case() == multibase::encoding_case::upper) {
+                               [](auto chr) { return std::tolower(chr); });
+      } else if (metadata.type_case() == multibase::encoding_case::upper) {
         std::ranges::transform(encoded, encoded.begin(),
-                               [](auto ch) { return std::toupper(ch); });
+                               [](auto chr) { return std::toupper(chr); });
       }
     }
     std::cout << magic_enum::enum_name(encoded_data.base) << "\n";
@@ -81,7 +116,7 @@ TEST(Multibase, BlockSize) {
   // 4 encoded characters = 6+6+6+6 = 24 bits
   // 3 decoded characters = 8+8+8 = 24 bits
 
-  using namespace std::string_literals;
+  using std::string_literals::operator""s;
 
   EXPECT_THAT(multibase::base_64::encoded_size("elephant"s), 12);
   EXPECT_THAT(multibase::base_64::encode("elephant"s), "ZWxlcGhhbnQ");
@@ -98,7 +133,8 @@ TEST(Multibase, BlockSize) {
   multibase::base_58_btc::encode("elephant", std::back_inserter(output));
   EXPECT_THAT(output, "2HstAjsCYPZyH");
 
-  output.resize(12);
+  constexpr auto output_size = 12;
+  output.resize(output_size);
   multibase::base_64::encode("elephant", std::span{output});
   EXPECT_THAT(output, "ZWxlcGhhbnQA");  // includes null terminator 0 => A
   output.clear();
@@ -119,9 +155,12 @@ TEST(Multibase, BlockSize) {
 }
 
 TEST(Multibase, RandomData) {
-  std::random_device rd;
-  auto random_char = [&rd]() { return static_cast<unsigned char>(rd()); };
-  std::vector<unsigned char> data(std::rand() % 4097);
+  std::random_device random;
+  auto random_char = [&random]() {
+    return static_cast<unsigned char>(random());
+  };
+  std::vector<unsigned char> data(static_cast<std::size_t>(
+      random() % std::numeric_limits<unsigned char>::max()));
   std::generate(begin(data), end(data), random_char);
   magic_enum::enum_for_each<multibase::encoding>(
       [&](multibase::encoding enum_val) {
@@ -275,7 +314,6 @@ INSTANTIATE_TEST_SUITE_P(
              {multibase::encoding::base_64_pad, "MAAAAAAAAAA=="},
              {multibase::encoding::base_64_url, "uAAAAAAAAAA"},
              {multibase::encoding::base_64_url_pad, "UAAAAAAAAAA=="}}}),
-    [](const auto& info) { return info.param.name; });
+    [](const auto& test_info) { return test_info.param.name; });
 // todo deliberately under-allocate for encode/decode functions
-
 }  // namespace test
