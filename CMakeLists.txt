@@ -21,25 +21,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_library(
-  libmultibase
-  multibase/basic_algorithm.cpp
-  multibase/basic_algorithm.hpp
-  multibase/encoding.cpp
-  multibase/encoding.hpp
-  multibase/codec.cpp
-  multibase/codec.hpp
-  multibase/encoding_case.hpp
-  multibase/encoding_case.cpp
-  multibase/encoding_metadata.hpp
-  multibase/encoding_metadata.cpp
-  multibase/encoding_traits.hpp
-  multibase/encoding_traits.cpp
-  multibase/log.hpp
-  multibase/log.cpp)
-
+add_library(libmultibase)
 target_include_directories(
-  libmultibase PUBLIC $<BUILD_INTERFACE:${multibase_SOURCE_DIR}>
+  libmultibase PUBLIC $<BUILD_INTERFACE:${multibase_SOURCE_DIR}/include>
                       $<INSTALL_INTERFACE:include>)
 set_target_properties(libmultibase PROPERTIES OUTPUT_NAME multibase)
 target_link_libraries(libmultibase magic_enum::magic_enum range-v3::range-v3
@@ -78,7 +62,7 @@ target_compile_options(
          $<$<CXX_COMPILER_ID:GNU>:${GNU_COMPILE_OPTIONS}>
          $<$<CXX_COMPILER_ID:MSVC>:${MSVC_COMPILE_OPTIONS}>)
 
-add_executable(multibase multibase/main.cpp)
+add_executable(multibase)
 target_link_libraries(multibase libmultibase)
 
 include(CMakePackageConfigHelpers)
@@ -108,25 +92,6 @@ install(FILES "${multibase_BINARY_DIR}/multibaseConfigVersion.cmake"
               "${multibase_BINARY_DIR}/multibaseConfig.cmake"
         DESTINATION share/cmake/multibase)
 
-if(BUILD_TESTING)
-  find_package(benchmark CONFIG REQUIRED)
-  add_executable(multibase_benchmark benchmark/main.cpp)
-  target_link_libraries(
-    multibase_benchmark PRIVATE libmultibase benchmark::benchmark
-                                benchmark::benchmark_main)
-  enable_testing()
-  find_package(GTest MODULE REQUIRED)
-  add_executable(multibase_test test/multibase_test.cpp)
-  target_link_libraries(multibase_test PRIVATE libmultibase GTest::gmock_main)
-  set_target_properties(multibase_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                                                  ${CMAKE_CURRENT_BINARY_DIR})
-  target_compile_options(
-    multibase_test
-    PUBLIC $<$<CXX_COMPILER_ID:Clang>:${CLANG_COMPILE_OPTIONS}>
-           $<$<CXX_COMPILER_ID:GNU>:${GNU_COMPILE_OPTIONS}>
-           $<$<CXX_COMPILER_ID:MSVC>:${MSVC_COMPILE_OPTIONS}>)
-
-  gtest_discover_tests(multibase_test)
-endif()
-
-include(CTest)
+add_subdirectory(src)
+add_subdirectory(include)
+add_subdirectory(test)
