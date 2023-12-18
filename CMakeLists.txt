@@ -30,11 +30,13 @@ add_library(
   multibase/codec.cpp
   multibase/codec.hpp
   multibase/encoding_case.hpp
+  multibase/encoding_case.cpp
   multibase/encoding_metadata.hpp
   multibase/encoding_metadata.cpp
   multibase/encoding_traits.hpp
+  multibase/encoding_traits.cpp
   multibase/log.hpp
-  multibase/encoding_case.cpp)
+  multibase/log.cpp)
 
 target_include_directories(
   libmultibase PUBLIC $<BUILD_INTERFACE:${multibase_SOURCE_DIR}>
