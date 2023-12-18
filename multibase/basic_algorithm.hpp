@@ -229,7 +229,10 @@ std::string_view basic_algorithm<T, Traits>::encode(const range& chunk,
     input_size = static_cast<std::size_t>(std::ceil(partial_blocks) *
                                           decoded_chunk_size);
   }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
   auto elem = std::begin(chunk);
+#pragma clang diagnostic pop
   auto len = std::size_t{0};
   // zero can be represented by a single 0 value in all bases
   // this means we can count and prepend
@@ -313,7 +316,10 @@ template <std::ranges::input_range range>
 std::span<unsigned char> basic_algorithm<T, Traits>::decode(
     const range& chunk, std::span<unsigned char> output) {
   std::ranges::fill(output, static_cast<unsigned char>(0));
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
   auto first = std::begin(chunk);
+#pragma clang diagnostic pop
   auto last = std::end(chunk);
   std::size_t length = 0;
   std::size_t leading_zeroes = 0;
