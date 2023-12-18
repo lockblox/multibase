@@ -149,6 +149,19 @@ TEST(Multibase, BlockSize) {
   multibase::base_64::decode("ZWxlcGhhbnQ", std::back_inserter(output));
   EXPECT_THAT(output, "elephant");
 
+  output.clear();
+  auto encoded_buffer = std::string{"ZWxlcGhhbnQA"};
+  auto encoded_view =
+      std::string_view{encoded_buffer.data(), encoded_buffer.size() - 1};
+  multibase::base_64::decode(encoded_view, std::back_inserter(output));
+  EXPECT_THAT(output, "elephant");
+  output.clear();
+  encoded_buffer.back() = 'B';
+  multibase::base_64::decode(encoded_view, std::back_inserter(output));
+  EXPECT_THAT(output, "elephant");
+}
+
+TEST(Multibase, log2) {
   EXPECT_THAT(multibase::log2(58), 5);
   EXPECT_THAT(multibase::log2(64), 6);
   EXPECT_THAT(multibase::log2(256), 8);
