@@ -152,6 +152,46 @@ TEST(Multibase, BlockSize) {
   EXPECT_THAT(multibase::log2(58), 5);
   EXPECT_THAT(multibase::log2(64), 6);
   EXPECT_THAT(multibase::log2(256), 8);
+
+  auto testcases = {
+      "bafybeiab6ussnleizgveel2uyig7bl6yxzbgxec7jbcbbqugj53wqq7o23",
+      "bafybeiab6ussnleizgveel2uyig7bl6yxzbgxec7jbcbbqugj53wqq7o2y",
+      "bafybeiatk2djo7k76lwlyffode33a4vpmleez4vqtrttb6ixyaqv3ixl7e",
+      "bafybeiatk2djo7k76lwlyffode33a4vpmleez4vqtrttb6ixyaqv3ixl7h",
+      "bafybeiatqn2wouohelg2mfalz6ujmoqdhzp4bnsidhlo2645u27yx2e25u",
+      "bafybeiatqn2wouohelg2mfalz6ujmoqdhzp4bnsidhlo2645u27yx2e25x",
+      "bafybeib2ouovh24hcizjhnv3xk5wuazwu6urrfgreo4wvyikqg56p6lssq",
+      "bafybeib2ouovh24hcizjhnv3xk5wuazwu6urrfgreo4wvyikqg56p6lsst",
+      "bafybeibru5jaooun3le664xubcfn37mfa5icmfqpogt4pljye5b3bbhz54",
+      "bafybeibru5jaooun3le664xubcfn37mfa5icmfqpogt4pljye5b3bbhz57",
+      "bafybeibyjwzzberkr3lutkjjuwlvtmd4k3laipv3vdiaxc3pkni7ake7ha",
+      "bafybeibyjwzzberkr3lutkjjuwlvtmd4k3laipv3vdiaxc3pkni7ake7hd",
+      "bafybeibypqcpl7qgzdaxzkwd4kgbcyy5jbaqmet64ovtod4zbuzat6chzu",
+      "bafybeibypqcpl7qgzdaxzkwd4kgbcyy5jbaqmet64ovtod4zbuzat6chzx",
+      "bafybeicmfv6pieekowdzuvpgzqrpwruis5qjllgyjm57cozmjdqe2jyn6i",
+      "bafybeicmfv6pieekowdzuvpgzqrpwruis5qjllgyjm57cozmjdqe2jyn6l",
+      "bafybeicwl7hsaxdhetfzz4c3txnnocdtkwczxaz2i5mwyc7goraookmbba",
+      "bafybeicwl7hsaxdhetfzz4c3txnnocdtkwczxaz2i5mwyc7goraookmbbb",
+      "bafybeid7ctk2gcrhjokyljiwq4wyd2usmdg5qlfokyfmyaezemsiwptsme",
+      "bafybeid7ctk2gcrhjokyljiwq4wyd2usmdg5qlfokyfmyaezemsiwptsmh",
+      "bafybeidfq65jd7lw2awazd2cy3uiclrqjv7patrsqhxdhkmqcxu37ihy7a",
+      "bafybeidfq65jd7lw2awazd2cy3uiclrqjv7patrsqhxdhkmqcxu37ihy7d",
+      "bafybeidfruh6lnzzvcaru3bffnuxnpvtjeapekomc4ehjhr7myl4n5ppbm",
+      "bafybeidfruh6lnzzvcaru3bffnuxnpvtjeapekomc4ehjhr7myl4n5ppbp",
+      "bafybeie2pg35ccpcnvsylesq634msypcbhbouwmble6qhzskjwvixqmeou",
+      "bafybeie2pg35ccpcnvsylesq634msypcbhbouwmble6qhzskjwvixqmeov",
+      "bafybeiepvkj2subyitavspfky7w5nodlvssfaypevimaljf4s3wz32dwb3",
+      "bafybeiepvkj2subyitavspfky7w5nodlvssfaypevimaljf4s3wz32dwby",
+      "bafybeifqdk6c6le3hn2663ktnabmgcnv447m2epafpokqyxnly65nygndm",
+      "bafybeifqdk6c6le3hn2663ktnabmgcnv447m2epafpokqyxnly65nygndn",
+      "bafybeig4swjz7dres3n4qfwziufw2d3skzdsvljv64tugdkayrcwb34yjq",
+      "bafybeig4swjz7dres3n4qfwziufw2d3skzdsvljv64tugdkayrcwb34yjt",
+      "bafybeigi6zad4teafc2krhuhqykbcshe7cfgygve6xhaunkv4wfeuup5i3",
+      "bafybeigi6zad4teafc2krhuhqykbcshe7cfgygve6xhaunkv4wfeuup5iy"};
+  std::ranges::for_each(testcases, [](const auto& input) {
+    auto decoded = multibase::decode(std::string{input});
+    EXPECT_FALSE(decoded.empty());
+  });
 }
 
 TEST(Multibase, RandomData) {
