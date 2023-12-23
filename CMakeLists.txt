@@ -11,10 +11,13 @@ project(
 
 option(BUILD_TESTING "Build unit tests" ON)
 
+set(CLI11_PRECOMPILED ON)
+
 find_package(Microsoft.GSL CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -34,6 +37,7 @@ add_library(
   multibase/encoding_metadata.cpp
   multibase/encoding_traits.hpp
   multibase/log.hpp
+  multibase/log.cpp
   multibase/encoding_case.cpp)
 
 target_include_directories(
@@ -77,7 +81,7 @@ target_compile_options(
          $<$<CXX_COMPILER_ID:MSVC>:${MSVC_COMPILE_OPTIONS}>)
 
 add_executable(multibase multibase/main.cpp)
-target_link_libraries(multibase libmultibase)
+target_link_libraries(multibase PRIVATE libmultibase CLI11::CLI11)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(

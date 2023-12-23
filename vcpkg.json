@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "dependencies": [
     "benchmark",
+    "cli11",
+    "fmt",
     "gtest",
-    "range-v3",
     "magic-enum",
     "ms-gsl",
-    "fmt"
+    "range-v3"
   ]
 }

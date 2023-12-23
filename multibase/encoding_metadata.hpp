@@ -14,6 +14,8 @@ class encoding_metadata {
  public:
   explicit constexpr encoding_metadata(enum encoding t_encoding);
 
+  static encoding_metadata from_name(std::string_view name);
+
   [[nodiscard]] constexpr encoding base() const;
   [[nodiscard]] constexpr std::string_view name() const;
   [[nodiscard]] constexpr std::string_view alphabet() const;

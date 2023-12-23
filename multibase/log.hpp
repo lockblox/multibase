@@ -1,8 +1,8 @@
 #pragma once
 
-#include <multibase/portability.hpp>
+#include <concepts>  // for integral
 
-#include <numeric>
+#include <multibase/portability.hpp>
 
 namespace multibase {
 

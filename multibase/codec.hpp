@@ -20,7 +20,6 @@
 #include <multibase/encoding.hpp>         // for encoding, encoding::base_10
 
 namespace multibase {
-class codec {};
 
 template <std::ranges::input_range range>
 std::string encode(const range& input, encoding base, bool multiformat = true);
