@@ -1,7 +1,6 @@
 #pragma once
 
 #pragma warning(disable : 6285)
-#include <fmt/format.h>
 
 #include <array>
 
