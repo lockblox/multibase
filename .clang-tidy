@@ -1,6 +1,9 @@
+Checks: '*,-llvmlibc-*,-modernize-use-trailing-return-type,-fuchsia-*,-altera-*'
 WarningsAsErrors: '*'
-HeaderFilterRegex: ''
+HeaderFilterRegex: '.*'
 FormatStyle: 'file'
 CheckOptions:
   - key:             readability-identifier-length.IgnoredVariableNames
-    value:           '(_)|(ch)'
+    value:           '(_)|(ch)|(i)|(j)|(c)|(n)'
+  - key:             readability-identifier-length.IgnoredParameterNames
+    value:           '(_)|(ch)|(i)|(j)|(c)|(n)'

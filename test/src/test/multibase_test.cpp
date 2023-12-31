@@ -33,13 +33,14 @@
 #include <string_view>  // for operator<<
 #include <vector>       // for allocator, vector
 
+#include "gmock/gmock.h"  // for MakePredicateFormatt...
+#include "gtest/gtest.h"  // for Test, TestInfo (ptr ...
+
 #include <magic_enum.hpp>                        // for enum_name
 #include <magic_enum_utility.hpp>                // for enum_for_each
 #include <range/v3/iterator/basic_iterator.hpp>  // for operator!=
 #include <range/v3/range_fwd.hpp>                // for cardinality
 #include <range/v3/view/view.hpp>                // for operator|
-#include "gmock/gmock.h"                         // for MakePredicateFormatt...
-#include "gtest/gtest.h"                         // for Test, TestInfo (ptr ...
 
 #include <multibase/codec.hpp>              // for decode, base_64, encode
 #include <multibase/encoding.hpp>           // for encoding
@@ -61,15 +62,16 @@ struct testcase {
   std::vector<encoded_testcase> encodings;
 } __attribute__((aligned(128)));  // NOLINT
 
-static std::ostream& operator<<(std::ostream& os, const testcase& t_testcase) {
-  os << t_testcase.name;
-  return os;
+static std::ostream& operator<<(std::ostream& ostream,
+                                const testcase& t_testcase) {
+  ostream << t_testcase.name;
+  return ostream;
 }
 
 class codec : public testing::TestWithParam<testcase> {};
 
 // cppcheck-suppress syntaxError
-TEST_P(codec, encoding) {
+TEST_P(codec, encoding) {  // NOLINT
   const auto& testcase = GetParam();
   std::ranges::for_each(testcase.encodings, [&](const auto& encoded_data) {
     auto metadata = multibase::encoding_metadata{encoded_data.base};
@@ -91,7 +93,7 @@ TEST_P(codec, encoding) {
   });
 }
 
-TEST_P(codec, decoding) {
+TEST_P(codec, decoding) {  // NOLINT
   const auto& testcase = GetParam();
   std::ranges::for_each(testcase.encodings, [&](const auto& encoded_data) {
     std::cout << magic_enum::enum_name(encoded_data.base) << "\n";
@@ -105,12 +107,12 @@ TEST_P(codec, decoding) {
   });
 }
 
-TEST(Multibase, InvalidCharacters) {
+TEST(Multibase, InvalidCharacters) {  // NOLINT
   auto input = std::string("z\\=+BpKd9UKM");
-  EXPECT_THROW(multibase::decode(input), std::invalid_argument);
+  EXPECT_THROW(multibase::decode(input), std::invalid_argument);  // NOLINT
 }
 
-TEST(Multibase, BlockSize) {
+TEST(Multibase, BlockSize) {  // NOLINT
   // each decoded character is a 256 (8-bit) value
   // each encoded character is a 64 (6-bit) value
   // 4 encoded characters = 6+6+6+6 = 24 bits
@@ -161,7 +163,7 @@ TEST(Multibase, BlockSize) {
   EXPECT_THAT(output, "elephant");
 }
 
-TEST(Multibase, log2) {
+TEST(Multibase, log2) {  // NOLINT
   EXPECT_THAT(multibase::log2(58), 5);
   EXPECT_THAT(multibase::log2(64), 6);
   EXPECT_THAT(multibase::log2(256), 8);
@@ -207,7 +209,7 @@ TEST(Multibase, log2) {
   });
 }
 
-TEST(Multibase, RandomData) {
+TEST(Multibase, RandomData) {  // NOLINT
   std::random_device random;
   auto random_char = [&random]() {
     return static_cast<unsigned char>(random());
@@ -223,7 +225,7 @@ TEST(Multibase, RandomData) {
       });
 }
 
-INSTANTIATE_TEST_SUITE_P(
+INSTANTIATE_TEST_SUITE_P(  // NOLINT
     multibase, codec,
     ::testing::Values(
         testcase{"elephant",

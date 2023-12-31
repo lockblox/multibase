@@ -1,5 +1,5 @@
-#ifndef PORTABILITY_H
-#define PORTABILITY_H
+#ifndef MULTIBASE_PORTABILITY_HPP
+#define MULTIBASE_PORTABILITY_HPP
 
 #if defined(_MSC_VER)
 #define MULTIBASE_CPLUSPLUS _MSVC_LANG
@@ -22,4 +22,4 @@
 #endif
 #endif
 
-#endif  // PORTABILITY_H
+#endif

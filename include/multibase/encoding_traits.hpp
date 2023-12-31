@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MULTIBASE_ENCODING_TRAITS_HPP
+#define MULTIBASE_ENCODING_TRAITS_HPP
 
 #pragma warning(disable : 6285)
 
@@ -14,7 +15,7 @@ struct encoding_traits {
   constexpr static std::array<char, 0> alphabet = {};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::none;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -22,7 +23,7 @@ struct encoding_traits<encoding::base_2> {
   constexpr static const std::array<char, 2> alphabet = {'0', '1'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::none;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -31,7 +32,7 @@ struct encoding_traits<encoding::base_8> {
                                                          '4', '5', '6', '7'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::none;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -40,7 +41,7 @@ struct encoding_traits<encoding::base_10> {
       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::none;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -50,7 +51,7 @@ struct encoding_traits<encoding::base_16> {
       '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::lower;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -60,7 +61,7 @@ struct encoding_traits<encoding::base_16_upper> {
       '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::upper;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -71,7 +72,7 @@ struct encoding_traits<encoding::base_32> {
       'w', 'x', 'y', 'z', '2', '3', '4', '5', '6', '7'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::lower;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -82,7 +83,7 @@ struct encoding_traits<encoding::base_32_upper> {
       'W', 'X', 'Y', 'Z', '2', '3', '4', '5', '6', '7'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::upper;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -93,7 +94,7 @@ struct encoding_traits<encoding::base_32_hex> {
       'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::lower;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -104,7 +105,7 @@ struct encoding_traits<encoding::base_32_hex_pad> {
       'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v'};
   constexpr static char padding = '=';
   constexpr static encoding_case type_case = encoding_case::lower;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -115,7 +116,7 @@ struct encoding_traits<encoding::base_32_hex_pad_upper> {
       'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V'};
   constexpr static char padding = '=';
   constexpr static encoding_case type_case = encoding_case::upper;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -126,7 +127,7 @@ struct encoding_traits<encoding::base_32_hex_upper> {
       'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::upper;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -137,7 +138,7 @@ struct encoding_traits<encoding::base_32_pad> {
       'w', 'x', 'y', 'z', '2', '3', '4', '5', '6', '7'};
   constexpr static char padding = '=';
   constexpr static encoding_case type_case = encoding_case::lower;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -148,7 +149,7 @@ struct encoding_traits<encoding::base_32_pad_upper> {
       'W', 'X', 'Y', 'Z', '2', '3', '4', '5', '6', '7'};
   constexpr static char padding = '=';
   constexpr static encoding_case type_case = encoding_case::upper;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -159,7 +160,7 @@ struct encoding_traits<encoding::base_32_z> {
       's', 'z', 'a', '3', '4', '5', 'h', '7', '6', '9'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::lower;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -170,7 +171,7 @@ struct encoding_traits<encoding::base_36> {
       'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::lower;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -181,7 +182,7 @@ struct encoding_traits<encoding::base_36_upper> {
       'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::upper;
-  constexpr static char is_case_sensitive = false;
+  constexpr static bool is_case_sensitive = false;
 };
 
 template <>
@@ -193,7 +194,7 @@ struct encoding_traits<encoding::base_58_btc> {
       'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::both;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -205,7 +206,7 @@ struct encoding_traits<encoding::base_58_flickr> {
       'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::both;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -218,7 +219,7 @@ struct encoding_traits<encoding::base_64> {
       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::both;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -231,7 +232,7 @@ struct encoding_traits<encoding::base_64_pad> {
       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
   constexpr static char padding = '=';
   constexpr static encoding_case type_case = encoding_case::both;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -244,7 +245,7 @@ struct encoding_traits<encoding::base_64_url> {
       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::both;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 template <>
@@ -257,7 +258,9 @@ struct encoding_traits<encoding::base_64_url_pad> {
       '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'};
   constexpr static char padding = '=';
   constexpr static encoding_case type_case = encoding_case::both;
-  constexpr static char is_case_sensitive = true;
+  constexpr static bool is_case_sensitive = true;
 };
 
 }  // namespace multibase
+
+#endif

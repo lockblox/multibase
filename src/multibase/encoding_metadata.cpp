@@ -35,7 +35,7 @@ encoding_metadata encoding_metadata::from_name(std::string_view name) {
     auto metadata = encoding_metadata{base};
     return name == metadata.name();
   };
-  if (auto it = std::ranges::find_if(encodings, match_encoding);
+  if (auto* it = std::ranges::find_if(encodings, match_encoding);
       it != encodings.end()) {
     return encoding_metadata{*it};
   }

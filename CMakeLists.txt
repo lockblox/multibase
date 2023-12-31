@@ -98,3 +98,5 @@ install(FILES "${multibase_BINARY_DIR}/multibaseConfigVersion.cmake"
 add_subdirectory(src)
 add_subdirectory(include)
 add_subdirectory(test)
+
+include(CTest)

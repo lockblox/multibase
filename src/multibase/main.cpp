@@ -35,7 +35,7 @@
 
 namespace multibase {
 enum class encoding : char;
-}
+}  // namespace multibase
 
 int main(int argc, char** argv) {
   CLI::App app{"Convert between text and multibase encoding"};
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   auto is_multibase = true;
 
   app.add_flag("-l,--list", is_list, "list supported encodings");
-  auto encoding_option =
+  auto* encoding_option =
       app.add_option("-e,--encoding", base_name, "base of codec");
   app.add_option("-m, --multibase", is_multibase, "Include multibase prefix");
   app.add_option(
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     auto metadata = multibase::encoding_metadata::from_name(base_name);
 
     std::string input;
-    for (int ch; (ch = std::getchar()) != EOF;) {
+    for (int ch = 0; (ch = std::getchar()) != EOF;) {
       input.push_back(static_cast<char>(ch));
     }
     if (is_decoder) {

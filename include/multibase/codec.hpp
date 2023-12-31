@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MULTIBASE_CODEC_HPP
+#define MULTIBASE_CODEC_HPP
 
 #include <algorithm>    // for copy, transform
 #include <iterator>     // for back_inserter, begin, size
@@ -136,7 +137,7 @@ std::vector<unsigned char> decode(const range& input, encoding base) {
     case base_none: {
       auto result = std::vector<unsigned char>{};
       std::ranges::transform(input, std::back_inserter(result),
-                             [](unsigned char ch) { return ch; });
+                             [](unsigned char chr) { return chr; });
       return result;
     }
     case base_2:
@@ -199,3 +200,5 @@ std::vector<unsigned char> decode(const range& input) {
   return decode(ranges::subrange(++first, last), *base);
 }
 }  // namespace multibase
+
+#endif

@@ -58,7 +58,7 @@ void BM_Base_Encode(benchmark::State& state) {  // NOLINT
 
 void BM_Memcpy(benchmark::State& state) {  // NOLINT
   auto input = get_shuffled_input();
-  size_t size = input.size();
+  const auto size = input.size();
   std::vector<char> output(output_size, 0);
   while (state.KeepRunning()) {
     std::memcpy(output.data(), input.data(), size);
@@ -95,8 +95,8 @@ void BM_Stream_Encode(benchmark::State& state) {  // NOLINT
   std::string buffer;
   while (state.KeepRunning()) {
     std::ostringstream ostream;
-    for (auto c : input) {
-      ostream << std::hex << static_cast<int>(c);
+    for (auto chr : input) {
+      ostream << std::hex << static_cast<int>(chr);
     }
     buffer = ostream.str();
     (void)buffer;

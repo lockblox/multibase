@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MULTIBASE_BASIC_ALGORITHM_HPP
+#define MULTIBASE_BASIC_ALGORITHM_HPP
 
 #include <algorithm>    // for min, copy, fill
 #include <array>        // for array
@@ -22,10 +23,10 @@
 #include <range/v3/view/reverse.hpp>    // for reverse_view
 #include <range/v3/view/transform.hpp>  // for transform
 
-#include <multibase/encoding_traits.hpp>  // for encoding_traits
-#include <multibase/log.hpp>              // for log2
-#include <multibase/portability.hpp>      // for MULTIBASE_CONSTEVAL
 #include "multibase/encoding_case.hpp"    // for encoding_case
+#include "multibase/encoding_traits.hpp"  // for encoding_traits
+#include "multibase/log.hpp"              // for log2
+#include "multibase/portability.hpp"      // for MULTIBASE_CONSTEVAL
 
 namespace multibase {
 
@@ -56,7 +57,7 @@ class basic_algorithm {
 
   static constexpr std::size_t decoded_size(std::size_t len);
 
-  static constexpr int decode(char ch);
+  static constexpr int decode(char c);
 
   template <std::ranges::input_range range>
   static std::span<unsigned char> decode(const range& chunk,
@@ -78,11 +79,11 @@ class basic_algorithm {
 
   MULTIBASE_CONSTEVAL static bool is_chunkable();
 
-  constexpr static iterator find(const value_type& v) noexcept;
+  constexpr static iterator find(const value_type& val) noexcept;
 
   /** Determine the character encoding for a given value
   @return character encoding, or 0 if none such encoding exists */
-  constexpr static unsigned char getval(char p) noexcept;
+  constexpr static unsigned char getval(char val) noexcept;
 
   /** encoding as determined by size of character set */
   constexpr static auto radix =
@@ -91,6 +92,10 @@ class basic_algorithm {
   constexpr static auto ratio = std::ratio<log2(256), log2(radix)>{};
   constexpr static auto encoded_chunk_size = ratio.num;
   constexpr static auto decoded_chunk_size = ratio.den;
+  constexpr static auto byte_max = 256;
+  constexpr static auto invalid_value =
+      std::numeric_limits<unsigned char>::max();
+  constexpr static auto log256 = 5.545177444479562;
 
   /** Map from value to corresponding character in base encoding */
   constexpr static std::array<unsigned char,
@@ -153,7 +158,7 @@ constexpr std::size_t basic_algorithm<T, Traits>::encoded_size(
     auto length = encoded_chunk_size * blocks;
     return static_cast<std::size_t>(length);
   } else {
-    return static_cast<std::size_t>(static_cast<double>(len) * std::log(256.0) /
+    return static_cast<std::size_t>(static_cast<double>(len) * log256 /
                                     std::log(radix)) +
            1;
   }
@@ -165,7 +170,7 @@ std::size_t basic_algorithm<T, Traits>::count_leading_zeros(
     const range& chunk) {
   return static_cast<std::size_t>(std::distance(
       std::begin(chunk),
-      std::ranges::find_if(chunk, [](auto ch) { return decode(ch) != 0; })));
+      std::ranges::find_if(chunk, [](auto c) { return decode(c) != 0; })));
 }
 
 template <encoding T, typename Traits>
@@ -188,8 +193,8 @@ constexpr std::size_t basic_algorithm<T, Traits>::decoded_size(
         std::ceil(static_cast<double>(len) / encoded_chunk_size));
   } else {
     // need to include number of zeros here
-    return static_cast<std::size_t>(std::ceil(
-               static_cast<double>(len) * std::log(radix) / std::log(256.0))) +
+    return static_cast<std::size_t>(
+               std::ceil(static_cast<double>(len) * std::log(radix) / log256)) +
            1;
   }
 }
@@ -248,13 +253,14 @@ std::string_view basic_algorithm<T, Traits>::encode(const range& chunk,
         ++elem;
         continue;
       }
-      carry = *elem++;
+      carry = static_cast<unsigned char>(*elem++);
     }
-    std::size_t j = 0;
+    auto j = std::size_t{0};
     [[maybe_unused]] auto _ =
         std::ranges::find_if(ranges::reverse_view(output), [&](auto& out_val) {
-          carry += 256 * out_val;
-          auto byte = reinterpret_cast<unsigned char*>(&out_val);
+          carry += byte_max * out_val;
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+          auto* byte = reinterpret_cast<unsigned char*>(&out_val);
           *byte = static_cast<unsigned char>(carry % radix);
           carry /= radix;
           auto halt = carry == 0 && j >= len;
@@ -266,7 +272,7 @@ std::string_view basic_algorithm<T, Traits>::encode(const range& chunk,
   std::ranges::transform(
       output, std::begin(output),
       [unpadded_size, output_size = std::size_t{0}](std::size_t c) mutable {
-        return output_size++ < unpadded_size ? Traits::alphabet[c]
+        return output_size++ < unpadded_size ? Traits::alphabet.at(c)
                                              : Traits::padding;
       });
   auto data = output.begin();
@@ -304,8 +310,8 @@ constexpr int basic_algorithm<T, Traits>::decode(char ch) {
         break;
     }
   }
-  int val = valset[static_cast<std::size_t>(ch)];
-  if (val == 255) {
+  const int val = valset.at(static_cast<std::size_t>(ch));
+  if (val == invalid_value) {
     throw std::invalid_argument{fmt::format("Invalid input character {}", ch)};
   }
   return val;
@@ -324,8 +330,8 @@ std::span<unsigned char> basic_algorithm<T, Traits>::decode(
   std::size_t length = 0;
   std::size_t leading_zeroes = 0;
   std::size_t non_zeroes = 0;
-  [[maybe_unused]] int dcz = decoded_chunk_size;
-  [[maybe_unused]] int ecs = encoded_chunk_size;
+  [[maybe_unused]] const int dcz = decoded_chunk_size;
+  [[maybe_unused]] const int ecs = encoded_chunk_size;
   auto padding = std::size_t{0};
   auto input_size =
       is_chunkable() ? encoded_size(output.size()) : std::size(chunk);
@@ -345,12 +351,13 @@ std::span<unsigned char> basic_algorithm<T, Traits>::decode(
     for (auto rfirst = output.rbegin(), rlast = output.rend();
          rfirst != rlast && (carry != 0 || j < length); ++rfirst, ++j) {
       carry += static_cast<int>(radix) * (*rfirst);
-      *rfirst = static_cast<unsigned char>(carry % 256);
-      carry /= 256;
+      *rfirst = static_cast<unsigned char>(carry % byte_max);
+      carry /= byte_max;
     }
     length = j;
   }
-  auto non_zero = std::ranges::find_if(output, [](auto ch) { return ch != 0; });
+  auto non_zero =
+      std::ranges::find_if(output, [](auto chr) { return chr != 0; });
   [[maybe_unused]] auto output_size =
       is_chunkable() ? static_cast<std::size_t>(
                            static_cast<double>(std::size(chunk) - padding) /
@@ -398,18 +405,20 @@ MULTIBASE_CONSTEVAL bool basic_algorithm<T, Traits>::is_chunkable() {
 
 template <encoding T, typename Traits>
 constexpr typename basic_algorithm<T, Traits>::iterator
-basic_algorithm<T, Traits>::find(const value_type& v) noexcept {
+basic_algorithm<T, Traits>::find(const value_type& val) noexcept {
   return std::ranges::find(std::cbegin(Traits::alphabet),
-                           std::cend(Traits::alphabet), v);
+                           std::cend(Traits::alphabet), val);
 }
 
 /** Determine the character encoding for a given value
   @return character encoding, or 0 if none such encoding exists */
 template <encoding T, typename Traits>
-constexpr unsigned char basic_algorithm<T, Traits>::getval(char p) noexcept {
-  return find(p) == std::cend(Traits::alphabet)
-             ? static_cast<unsigned char>(255)
+constexpr unsigned char basic_algorithm<T, Traits>::getval(char val) noexcept {
+  return find(val) == std::cend(Traits::alphabet)
+             ? invalid_value
              : static_cast<unsigned char>(
-                   std::distance(std::cbegin(Traits::alphabet), find(p)));
+                   std::distance(std::cbegin(Traits::alphabet), find(val)));
 }
 }  // namespace multibase
+
+#endif

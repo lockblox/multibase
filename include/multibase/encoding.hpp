@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MULTIBASE_ENCODING_HPP
+#define MULTIBASE_ENCODING_HPP
 
 namespace multibase {
 
@@ -29,3 +30,5 @@ enum class encoding : char {
 };
 
 }  // namespace multibase
+
+#endif
