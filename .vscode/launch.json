@@ -12,7 +12,6 @@
             "args": [
                 "--encoding",
                 "base_64",
-                "<",
                 "${workspaceFolder}/test/data/hello_world.txt"
             ],
             "stopAtEntry": false,

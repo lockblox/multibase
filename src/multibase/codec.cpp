@@ -13,3 +13,30 @@
 // limitations under the License.
 
 #include <multibase/codec.hpp>
+
+#include <optional>   // for optional
+#include <stdexcept>  // for invalid_argument
+
+#include <fmt/core.h>  // for format
+
+#include <magic_enum.hpp>  // for enable_if_t, enum_cast
+
+namespace multibase {
+enum class encoding : char;
+}  // namespace multibase
+
+namespace multibase {
+
+char encode(encoding base) {
+  return static_cast<std::underlying_type_t<multibase::encoding>>(base);
+}
+
+encoding decode(char byte) {
+  auto base = magic_enum::enum_cast<encoding>(byte);
+  if (!base) {
+    throw std::invalid_argument{fmt::format("Unsupported base {}", byte)};
+  }
+  return *base;
+}
+
+}  // namespace multibase

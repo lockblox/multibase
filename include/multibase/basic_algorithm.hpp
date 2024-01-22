@@ -16,12 +16,11 @@
 #include <stdexcept>    // for invalid_argument
 #include <string>       // for string
 #include <string_view>  // for string_view
+#include <vector>       // for vector
 
 #include <fmt/core.h>                   // for format
-#include <range/v3/view/chunk.hpp>      // for chunk
-#include <range/v3/view/join.hpp>       // for join
+#include <range/v3/range/concepts.hpp>  // for sized_range
 #include <range/v3/view/reverse.hpp>    // for reverse_view
-#include <range/v3/view/transform.hpp>  // for transform
 
 #include "multibase/encoding_case.hpp"    // for encoding_case
 #include "multibase/encoding_traits.hpp"  // for encoding_traits
@@ -126,8 +125,6 @@ class basic_algorithm {
              getval(115), getval(116), getval(117), getval(118), getval(119),
              getval(120), getval(121), getval(122), getval(123), getval(124),
              getval(125), getval(126), getval(127)};
-
-  constexpr static auto base = T;
 };
 
 // IMPLEMENTATION
@@ -136,17 +133,36 @@ template <std::ranges::input_range InputRange,
           std::output_iterator<char> OutputIt>
 OutputIt basic_algorithm<T, Traits>::encode(const InputRange& input,
                                             OutputIt output) {
-  if constexpr (is_chunkable()) {
-    auto chunk_output = std::array<char, encoded_chunk_size>{};
-    auto func = [&](auto chunk) { return encode(chunk, chunk_output); };
-    auto output_view = input | ranges::views::chunk(decoded_chunk_size) |
-                       ranges::views::transform(func) | ranges::views::join;
-    std::ranges::copy_if(output_view, output,
-                         [](auto val) { return val != 0; });
-  } else {
-    auto buf = encode(input);
-    std::ranges::copy(buf, output);
+  if constexpr (!is_chunkable()) {
+    const std::vector<unsigned char> input_buffer{std::begin(input),
+                                                  std::end(input)};
+    std::string output_buffer(encoded_size(input_buffer), 0);
+    const std::string_view output_span = encode(input_buffer, output_buffer);
+    output = std::ranges::copy(output_span, output).out;
+    return output;
   }
+  auto chunk_output = std::array<char, encoded_chunk_size>{};
+  auto chunk_input = std::array<unsigned char, decoded_chunk_size>{};
+  auto first = std::begin(input);
+  auto last = std::end(input);
+  auto first2 = chunk_input.begin();
+  auto last2 = chunk_input.end();
+  while (first != last) {
+    if (first2 == last2) {
+      encode(chunk_input, chunk_output);
+      std::ranges::copy_if(chunk_output, output,
+                           [](auto val) { return val != 0; });
+      chunk_input.fill(0);
+      first2 = chunk_input.begin();
+    } else {
+      *first2++ = static_cast<unsigned char>(*first++);
+    }
+  }
+  auto input_span = std::span<unsigned char>{
+      chunk_input.data(),
+      static_cast<std::size_t>(std::distance(chunk_input.begin(), first2))};
+  auto output_span = encode(input_span, chunk_output);
+  std::ranges::copy(output_span, output);
   return output;
 }
 
@@ -202,10 +218,15 @@ constexpr std::size_t basic_algorithm<T, Traits>::decoded_size(
 template <encoding T, typename Traits>
 template <std::ranges::input_range range>
 std::string basic_algorithm<T, Traits>::encode(const range& input) {
-  auto output = std::string(encoded_size(input), 0);
-  auto view = encode(input, std::span{output.data(), output.size()});
-  std::ranges::copy(view, std::begin(output));
-  output.resize(std::size(view));
+  auto output = std::string{};
+  if constexpr (ranges::sized_range<range>) {
+    output.resize(encoded_size(input));
+    auto view = encode(input, std::span{output.data(), output.size()});
+    std::ranges::copy(view, std::begin(output));
+    output.resize(std::size(view));
+  } else {
+    encode(input, std::back_inserter(output));
+  }
   return output;
 }
 
@@ -374,12 +395,34 @@ template <encoding T, typename Traits>
 template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
 OutputIt basic_algorithm<T, Traits>::decode(const range& input,
                                             OutputIt output) {
-  static_assert(is_chunkable());
+  if constexpr (!is_chunkable()) {
+    const std::string input_buffer{std::begin(input), std::end(input)};
+    std::vector<unsigned char> output_buffer(decoded_size(input_buffer), 0);
+    const std::span<unsigned char> output_span =
+        decode(input_buffer, output_buffer);
+    output = std::ranges::copy(output_span, output).out;
+    return output;
+  }
   auto chunk_output = std::array<unsigned char, decoded_chunk_size>{};
-  auto func = [&](const auto& chunk) { return decode(chunk, chunk_output); };
-  auto output_view = input | ranges::views::chunk(encoded_chunk_size) |
-                     ranges::views::transform(func) | ranges::views::join;
-  std::ranges::copy(output_view, output);
+  auto chunk_input = std::array<char, encoded_chunk_size>{};
+  auto first = std::begin(input);
+  auto last = std::end(input);
+  auto first2 = chunk_input.begin();
+  auto last2 = chunk_input.end();
+  while (first != last) {
+    if (first2 == last2) {
+      decode(chunk_input, chunk_output);
+      std::ranges::copy(chunk_output, output);
+      first2 = chunk_input.begin();
+    } else {
+      *first2++ = static_cast<char>(*first++);
+    }
+  }
+  auto input_span = std::span<char>{
+      chunk_input.data(),
+      static_cast<std::size_t>(std::distance(chunk_input.begin(), first2))};
+  auto output_span = decode(input_span, chunk_output);
+  std::ranges::copy(output_span, output);
   return output;
 }
 

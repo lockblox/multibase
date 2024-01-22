@@ -17,8 +17,7 @@
 #pragma clang diagnostic ignored "-Wexit-time-destructors"
 #pragma clang diagnostic ignored "-Wglobal-constructors"
 
-#include <fmt/core.h>  // for format
-#include <span>        // for span
+#include <span>  // for span
 
 #include <algorithm>    // for copy, generate, __fo...
 #include <cctype>       // for tolower, toupper
@@ -40,7 +39,6 @@
 #include <magic_enum_utility.hpp>                // for enum_for_each
 #include <range/v3/iterator/basic_iterator.hpp>  // for operator!=
 #include <range/v3/range_fwd.hpp>                // for cardinality
-#include <range/v3/view/view.hpp>                // for operator|
 
 #include <multibase/codec.hpp>              // for decode, base_64, encode
 #include <multibase/encoding.hpp>           // for encoding
