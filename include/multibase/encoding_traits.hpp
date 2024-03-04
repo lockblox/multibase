@@ -12,7 +12,7 @@ namespace multibase {
 
 template <encoding T>
 struct encoding_traits {
-  constexpr static std::array<char, 0> alphabet = {};
+  constexpr static std::array<char, 255> alphabet = {};
   constexpr static char padding = 0;
   constexpr static encoding_case type_case = encoding_case::none;
   constexpr static bool is_case_sensitive = false;
