@@ -29,7 +29,7 @@ namespace multibase {
 
 enum class encoding : char;
 
-encoding_metadata encoding_metadata::from_name(std::string_view name) {
+encoding_metadata::encoding_metadata(std::string_view name) {
   auto encodings = magic_enum::enum_values<encoding>();
   auto match_encoding = [name](auto base) {
     auto metadata = encoding_metadata{base};
@@ -37,9 +37,10 @@ encoding_metadata encoding_metadata::from_name(std::string_view name) {
   };
   if (auto* it = std::ranges::find_if(encodings, match_encoding);
       it != encodings.end()) {
-    return encoding_metadata{*it};
+    *this = encoding_metadata{*it};
+  } else {
+    throw std::invalid_argument{fmt::format("No such encoding: {}", name)};
   }
-  throw std::invalid_argument{fmt::format("No such encoding: {}", name)};
 }
 
 }  // namespace multibase

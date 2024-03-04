@@ -38,45 +38,31 @@ class basic_algorithm {
 
   template <std::ranges::input_range range>
   static std::size_t encoded_size(const range& chunk);
-
   static constexpr std::size_t encoded_size(std::size_t len);
-
-  template <std::ranges::input_range InputRange,
-            std::output_iterator<char> OutputIt>
-  static OutputIt encode(const InputRange& input, OutputIt output);
-
-  template <std::ranges::input_range range>
-  static std::string encode(const range& input);
-
-  template <std::ranges::input_range range>
-  static std::string_view encode(const range& chunk, std::span<char> output);
+  static char encode(std::byte byte);
+  static std::string_view encode(std::string_view chunk,
+                                 std::span<char> output);
+  static std::string_view encode(std::span<const std::byte> chunk,
+                                 std::span<char> output);
+  static constexpr std::optional<std::size_t> encoded_chunk_size();
 
   template <std::ranges::input_range range>
   static std::size_t decoded_size(const range& chunk);
-
   static constexpr std::size_t decoded_size(std::size_t len);
-
-  static constexpr int decode(char c);
-
-  template <std::ranges::input_range range>
-  static std::span<unsigned char> decode(const range& chunk,
-                                         std::span<unsigned char> output);
-
-  template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
-  static OutputIt decode(const range& input, OutputIt output);
-
-  template <std::ranges::input_range range>
-  static std::string decode(const range& input);
+  static constexpr std::byte decode(char c);
+  static std::span<std::byte> decode(std::string_view chunk,
+                                     std::span<std::byte> output);
+  static constexpr std::optional<std::size_t> decoded_chunk_size();
 
  private:
   using CharsetT = decltype(Traits::alphabet);
   using value_type = typename CharsetT::value_type;
   using iterator = typename CharsetT::const_iterator;
 
+  MULTIBASE_CONSTEVAL static bool is_chunkable();
+
   template <std::ranges::input_range range>
   static std::size_t count_leading_zeros(const range& chunk);
-
-  MULTIBASE_CONSTEVAL static bool is_chunkable();
 
   constexpr static iterator find(const value_type& val) noexcept;
 
@@ -89,8 +75,8 @@ class basic_algorithm {
       static_cast<int>(sizeof(Traits::alphabet) / sizeof(value_type));
   /** Ratio of bits per unencoded value to bits per encoded value */
   constexpr static auto ratio = std::ratio<log2(256), log2(radix)>{};
-  constexpr static auto encoded_chunk_size = ratio.num;
-  constexpr static auto decoded_chunk_size = ratio.den;
+  constexpr static auto encoded_chunk_size_ = ratio.num;
+  constexpr static auto decoded_chunk_size_ = ratio.den;
   constexpr static auto byte_max = 256;
   constexpr static auto invalid_value =
       std::numeric_limits<unsigned char>::max();
@@ -127,51 +113,12 @@ class basic_algorithm {
              getval(125), getval(126), getval(127)};
 };
 
-// IMPLEMENTATION
-template <encoding T, typename Traits>
-template <std::ranges::input_range InputRange,
-          std::output_iterator<char> OutputIt>
-OutputIt basic_algorithm<T, Traits>::encode(const InputRange& input,
-                                            OutputIt output) {
-  if constexpr (!is_chunkable()) {
-    const std::vector<unsigned char> input_buffer{std::begin(input),
-                                                  std::end(input)};
-    std::string output_buffer(encoded_size(input_buffer), 0);
-    const std::string_view output_span = encode(input_buffer, output_buffer);
-    output = std::ranges::copy(output_span, output).out;
-    return output;
-  }
-  auto chunk_output = std::array<char, encoded_chunk_size>{};
-  auto chunk_input = std::array<unsigned char, decoded_chunk_size>{};
-  auto first = std::begin(input);
-  auto last = std::end(input);
-  auto first2 = chunk_input.begin();
-  auto last2 = chunk_input.end();
-  while (first != last) {
-    if (first2 == last2) {
-      encode(chunk_input, chunk_output);
-      std::ranges::copy_if(chunk_output, output,
-                           [](auto val) { return val != 0; });
-      chunk_input.fill(0);
-      first2 = chunk_input.begin();
-    } else {
-      *first2++ = static_cast<unsigned char>(*first++);
-    }
-  }
-  auto input_span = std::span<unsigned char>{
-      chunk_input.data(),
-      static_cast<std::size_t>(std::distance(chunk_input.begin(), first2))};
-  auto output_span = encode(input_span, chunk_output);
-  std::ranges::copy(output_span, output);
-  return output;
-}
-
 template <encoding T, typename Traits>
 constexpr std::size_t basic_algorithm<T, Traits>::encoded_size(
     std::size_t len) {
   if constexpr (is_chunkable()) {
-    auto blocks = std::ceil(static_cast<float>(len) / decoded_chunk_size);
-    auto length = encoded_chunk_size * blocks;
+    auto blocks = std::ceil(static_cast<float>(len) / decoded_chunk_size_);
+    auto length = encoded_chunk_size_ * blocks;
     return static_cast<std::size_t>(length);
   } else {
     return static_cast<std::size_t>(static_cast<double>(len) * log256 /
@@ -205,8 +152,8 @@ constexpr std::size_t basic_algorithm<T, Traits>::decoded_size(
     std::size_t len) {
   if constexpr (is_chunkable()) {
     return static_cast<std::size_t>(
-        decoded_chunk_size *
-        std::ceil(static_cast<double>(len) / encoded_chunk_size));
+        decoded_chunk_size_ *
+        std::ceil(static_cast<double>(len) / encoded_chunk_size_));
   } else {
     // need to include number of zeros here
     return static_cast<std::size_t>(
@@ -217,23 +164,21 @@ constexpr std::size_t basic_algorithm<T, Traits>::decoded_size(
 
 template <encoding T, typename Traits>
 template <std::ranges::input_range range>
-std::string basic_algorithm<T, Traits>::encode(const range& input) {
-  auto output = std::string{};
-  if constexpr (ranges::sized_range<range>) {
-    output.resize(encoded_size(input));
-    auto view = encode(input, std::span{output.data(), output.size()});
-    std::ranges::copy(view, std::begin(output));
-    output.resize(std::size(view));
-  } else {
-    encode(input, std::back_inserter(output));
-  }
-  return output;
+std::size_t basic_algorithm<T, Traits>::encoded_size(const range& chunk) {
+  return encoded_size(std::size(chunk));
+}
+
+// todo better name, this isn't really encoding
+template <encoding T, typename Traits>
+char basic_algorithm<T, Traits>::encode(std::byte byte) {
+  return Traits::alphabet.at(static_cast<std::size_t>(byte));
 }
 
 template <encoding T, typename Traits>
-template <std::ranges::input_range range>
-std::size_t basic_algorithm<T, Traits>::encoded_size(const range& chunk) {
-  return encoded_size(std::size(chunk));
+std::string_view basic_algorithm<T, Traits>::encode(std::string_view chunk,
+                                                    std::span<char> output) {
+  // cppcheck-suppress returnDanglingLifetime
+  return encode(std::as_bytes(std::span{chunk}), output);
 }
 
 /// Real underlying encoding routine which operates on either a chunk or a
@@ -241,19 +186,18 @@ std::size_t basic_algorithm<T, Traits>::encoded_size(const range& chunk) {
 /// @param output Buffer in which to write the output. We inevitably need a
 /// buffer so this cannot be an iterator
 template <encoding T, typename Traits>
-template <std::ranges::input_range range>
-std::string_view basic_algorithm<T, Traits>::encode(const range& chunk,
-                                                    std::span<char> output) {
+std::string_view basic_algorithm<T, Traits>::encode(
+    std::span<const std::byte> chunk, std::span<char> output) {
   std::ranges::fill(output, static_cast<char>(0));
   auto input_size = std::size(chunk);
   auto partial_blocks =
-      static_cast<float>(std::size(chunk)) / decoded_chunk_size;
+      static_cast<float>(std::size(chunk)) / decoded_chunk_size_;
   auto unpadded_size = std::min(
-      std::size(output),
-      static_cast<std::size_t>(std::ceil(partial_blocks * encoded_chunk_size)));
+      std::size(output), static_cast<std::size_t>(
+                             std::ceil(partial_blocks * encoded_chunk_size_)));
   if constexpr (is_chunkable()) {
     input_size = static_cast<std::size_t>(std::ceil(partial_blocks) *
-                                          decoded_chunk_size);
+                                          decoded_chunk_size_);
   }
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
@@ -267,7 +211,7 @@ std::string_view basic_algorithm<T, Traits>::encode(const range& chunk,
   for (std::size_t i = 0; i < input_size; ++i) {
     int carry = 0;
     if (elem != std::end(chunk)) {
-      if (*elem != 0) {
+      if (static_cast<int>(*elem) != 0) {
         all_zeroes = false;
       } else if (all_zeroes) {
         ++leading_zeroes;
@@ -313,9 +257,9 @@ std::string_view basic_algorithm<T, Traits>::encode(const range& chunk,
 }
 
 template <encoding T, typename Traits>
-constexpr int basic_algorithm<T, Traits>::decode(char ch) {
+constexpr std::byte basic_algorithm<T, Traits>::decode(char ch) {
   if (ch == Traits::padding) {
-    return 0;
+    return std::byte{0};
   }
   if constexpr (!Traits::is_case_sensitive) {
     switch (Traits::type_case) {
@@ -331,28 +275,25 @@ constexpr int basic_algorithm<T, Traits>::decode(char ch) {
         break;
     }
   }
-  const int val = valset.at(static_cast<std::size_t>(ch));
+  const auto val = valset.at(static_cast<std::size_t>(ch));
   if (val == invalid_value) {
     throw std::invalid_argument{fmt::format("Invalid input character {}", ch)};
   }
-  return val;
+  return std::byte{val};
 }
 
 template <encoding T, typename Traits>
-template <std::ranges::input_range range>
-std::span<unsigned char> basic_algorithm<T, Traits>::decode(
-    const range& chunk, std::span<unsigned char> output) {
-  std::ranges::fill(output, static_cast<unsigned char>(0));
+std::span<std::byte> basic_algorithm<T, Traits>::decode(
+    std::string_view chunk, std::span<std::byte> output) {
+  std::ranges::fill(output, static_cast<std::byte>(0));
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
-  auto first = std::begin(chunk);
+  const auto* first = std::begin(chunk);
 #pragma clang diagnostic pop
-  auto last = std::end(chunk);
+  const auto* last = std::end(chunk);
   std::size_t length = 0;
   std::size_t leading_zeroes = 0;
   std::size_t non_zeroes = 0;
-  [[maybe_unused]] const int dcz = decoded_chunk_size;
-  [[maybe_unused]] const int ecs = encoded_chunk_size;
   auto padding = std::size_t{0};
   auto input_size =
       is_chunkable() ? encoded_size(output.size()) : std::size(chunk);
@@ -360,7 +301,8 @@ std::span<unsigned char> basic_algorithm<T, Traits>::decode(
     int carry = 0;
     if (first != last) {
       padding += *first == Traits::padding;
-      carry = decode(*first++);
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      carry = static_cast<int>(decode(*first++));
       if (carry != 0) {
         ++non_zeroes;
       } else if (non_zeroes == 0) {
@@ -371,69 +313,24 @@ std::span<unsigned char> basic_algorithm<T, Traits>::decode(
     std::size_t j = 0;
     for (auto rfirst = output.rbegin(), rlast = output.rend();
          rfirst != rlast && (carry != 0 || j < length); ++rfirst, ++j) {
-      carry += static_cast<int>(radix) * (*rfirst);
-      *rfirst = static_cast<unsigned char>(carry % byte_max);
+      carry += static_cast<int>(radix) * static_cast<unsigned char>(*rfirst);
+      *rfirst = static_cast<std::byte>(carry % byte_max);
       carry /= byte_max;
     }
     length = j;
   }
-  auto non_zero =
-      std::ranges::find_if(output, [](auto chr) { return chr != 0; });
+  auto non_zero = std::ranges::find_if(
+      output, [](auto chr) { return static_cast<int>(chr) != 0; });
   [[maybe_unused]] auto output_size =
       is_chunkable() ? static_cast<std::size_t>(
                            static_cast<double>(std::size(chunk) - padding) /
-                           encoded_chunk_size * decoded_chunk_size)
+                           encoded_chunk_size_ * decoded_chunk_size_)
                      : std::min(length + leading_zeroes, output.size());
   auto offset = static_cast<std::int64_t>(leading_zeroes);
   std::advance(non_zero,
                -1 * std::min(std::distance(output.begin(), non_zero), offset));
   auto result = std::span{std::to_address(non_zero), output_size};
   return result;
-}
-
-template <encoding T, typename Traits>
-template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
-OutputIt basic_algorithm<T, Traits>::decode(const range& input,
-                                            OutputIt output) {
-  if constexpr (!is_chunkable()) {
-    const std::string input_buffer{std::begin(input), std::end(input)};
-    std::vector<unsigned char> output_buffer(decoded_size(input_buffer), 0);
-    const std::span<unsigned char> output_span =
-        decode(input_buffer, output_buffer);
-    output = std::ranges::copy(output_span, output).out;
-    return output;
-  }
-  auto chunk_output = std::array<unsigned char, decoded_chunk_size>{};
-  auto chunk_input = std::array<char, encoded_chunk_size>{};
-  auto first = std::begin(input);
-  auto last = std::end(input);
-  auto first2 = chunk_input.begin();
-  auto last2 = chunk_input.end();
-  while (first != last) {
-    if (first2 == last2) {
-      decode(chunk_input, chunk_output);
-      std::ranges::copy(chunk_output, output);
-      first2 = chunk_input.begin();
-    } else {
-      *first2++ = static_cast<char>(*first++);
-    }
-  }
-  auto input_span = std::span<char>{
-      chunk_input.data(),
-      static_cast<std::size_t>(std::distance(chunk_input.begin(), first2))};
-  auto output_span = decode(input_span, chunk_output);
-  std::ranges::copy(output_span, output);
-  return output;
-}
-
-template <encoding T, typename Traits>
-template <std::ranges::input_range range>
-std::string basic_algorithm<T, Traits>::decode(const range& input) {
-  auto output = std::string(decoded_size(input), 0);
-  auto view = decode(input, std::span{output.data(), output.size()});
-  std::ranges::copy(view, std::begin(output));
-  output.resize(std::size(view));
-  return output;
 }
 
 template <encoding T, typename Traits>
@@ -444,6 +341,22 @@ MULTIBASE_CONSTEVAL bool basic_algorithm<T, Traits>::is_chunkable() {
     }
   }
   return true;
+}
+
+template <encoding T, typename Traits>
+constexpr std::optional<std::size_t>
+basic_algorithm<T, Traits>::encoded_chunk_size() {
+  return is_chunkable() ? std::optional<std::size_t>{encoded_chunk_size_}
+                        : std::nullopt;
+}
+
+template <encoding T, typename Traits>
+constexpr std::optional<std::size_t>
+basic_algorithm<T, Traits>::decoded_chunk_size() {
+  if constexpr (is_chunkable()) {
+    return decoded_chunk_size_;
+  }
+  return std::nullopt;
 }
 
 template <encoding T, typename Traits>

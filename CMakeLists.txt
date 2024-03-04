@@ -57,6 +57,7 @@ set(GNU_COMPILE_OPTIONS
     -Wuseless-cast
     -Wdouble-promotion
     -Wformat=2
+    -ftemplate-backtrace-limit=0
     -Wno-unknown-pragmas)
 
 target_compile_options(

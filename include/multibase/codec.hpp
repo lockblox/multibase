@@ -13,10 +13,57 @@
 #pragma warning(pop)
 #include <range/v3/view/subrange.hpp>  // for subrange
 
+#include <multibase/base_none.hpp>
 #include <multibase/basic_algorithm.hpp>  // for basic_algorithm
 #include <multibase/encoding.hpp>         // for encoding, encoding::base_10
 
 namespace multibase {
+
+/// Encapsulates the stateless functions required to perform base conversion.
+///
+class codec {
+ public:
+  explicit codec(encoding base);
+
+  template <std::ranges::input_range range>
+  std::size_t encoded_size(const range& chunk);
+  std::size_t encoded_size(std::size_t len);
+  char encode(std::byte byte);
+  std::string_view encode(std::span<const std::byte> input,
+                          std::span<char> output);
+
+  template <std::ranges::input_range range>
+  std::size_t decoded_size(const range& chunk);
+  std::size_t decoded_size(std::size_t len);
+  std::byte decode(char chr);
+  std::span<std::byte> decode(std::string_view input,
+                              std::span<std::byte> output);
+  [[nodiscard]] std::optional<std::size_t> encoded_chunk_size() const;
+  [[nodiscard]] std::optional<std::size_t> decoded_chunk_size() const;
+
+ private:
+  std::size_t (*encoded_size_)(std::size_t len){nullptr};
+  std::string_view (*encode_)(std::span<const std::byte>,
+                              std::span<char>){nullptr};
+  char (*encode_byte_)(std::byte){nullptr};
+  std::size_t (*decoded_size_)(std::size_t len){nullptr};
+  std::span<std::byte> (*decode_)(std::string_view,
+                                  std::span<std::byte>){nullptr};
+  std::byte (*decode_byte_)(char chr){nullptr};
+  std::optional<std::size_t> (*encoded_chunk_size_)(){nullptr};
+  std::optional<std::size_t> (*decoded_chunk_size_)(){nullptr};
+
+  template <typename impl>
+  constexpr void init();
+
+  template <std::ranges::input_range range>
+  std::size_t count_leading_zeros(const range& chunk);
+};
+
+template <std::ranges::input_range range>
+std::size_t codec::encoded_size(const range& chunk) {
+  return encoded_size(std::size(chunk));
+}
 
 template <std::ranges::input_range range>
 std::string encode(const range& input, encoding base, bool multiformat = true);
@@ -25,30 +72,33 @@ template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
 OutputIt encode(const range& input, OutputIt output, encoding base,
                 bool multiformat = true);
 
-template <typename codec, std::ranges::input_range range,
-          std::output_iterator<char> OutputIt>
-OutputIt encode(const range& input, OutputIt output, bool multiformat);
-
 char encode(encoding base);
 
+template <std::ranges::input_range range>
+std::size_t codec::decoded_size(const range& chunk) {
+  if (decoded_chunk_size()) {
+    return decoded_size(std::size(chunk));
+  }
+  auto zeros = count_leading_zeros(chunk);
+  return zeros + decoded_size(std::size(chunk) - zeros);
+}
 encoding decode(char byte);
 
 template <std::ranges::input_range range>
-std::vector<unsigned char> decode(const range& input);
+std::vector<std::byte> decode(const range& input);
 
 template <std::ranges::input_range range>
-std::vector<unsigned char> decode(const range& input, encoding base);
+std::vector<std::byte> decode(const range& input, encoding base);
 
-template <typename codec, std::ranges::input_range range,
-          std::output_iterator<char> OutputIt>
+template <std::ranges::input_range range,
+          std::output_iterator<std::byte> OutputIt>
 OutputIt decode(const range& input, OutputIt output);
 
-template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
-OutputIt decode(const range& input, OutputIt output);
-
-template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
+template <std::ranges::input_range range,
+          std::output_iterator<std::byte> OutputIt>
 OutputIt decode(const range& input, OutputIt output, encoding base);
 
+using base_none = base_none;
 using base_2 = basic_algorithm<encoding::base_2>;
 using base_8 = basic_algorithm<encoding::base_8>;
 using base_10 = basic_algorithm<encoding::base_10>;
@@ -76,10 +126,25 @@ using base_64_url_pad = basic_algorithm<encoding::base_64_url_pad>;
 
 template <std::ranges::input_range range>
 std::string encode(const range& input, encoding base, bool multiformat) {
-  std::string buffer;
-  auto output = std::back_inserter(buffer);
-  encode(input, output, base, multiformat);
-  return buffer;
+  auto encoder = codec{base};
+  auto output = std::string{};
+  if constexpr (ranges::sized_range<range>) {
+    auto size = encoder.encoded_size(input);
+    auto offset = std::size_t{0};
+    if (multiformat) {
+      output.push_back(encode(base));
+      offset = 1;
+    }
+    output.resize(offset + size);
+    auto view = encoder.encode(std::as_bytes(std::span{input}),
+                               std::span{&output[offset], size});
+    std::ranges::copy(view,
+                      std::next(output.begin(), static_cast<int>(offset)));
+    output.resize(view.size() + offset);
+  } else {
+    encode(input, std::back_inserter(output), base, multiformat);
+  }
+  return output;
 }
 
 // Note that the null terminator on char* strings will also be included.
@@ -87,117 +152,77 @@ std::string encode(const range& input, encoding base, bool multiformat) {
 template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
 OutputIt encode(const range& input, OutputIt output, encoding base,
                 bool multiformat) {
-  switch (base) {
-    using enum multibase::encoding;
-    case base_none:
-      if (multiformat) {
-        *output++ = encode(base);
-      }
-      std::ranges::copy(input, output);
-      break;
-    case base_2:
-      encode<multibase::base_2>(input, output, multiformat);
-      break;
-    case base_8:
-      encode<multibase::base_8>(input, output, multiformat);
-      break;
-    case base_10:
-      encode<multibase::base_10>(input, output, multiformat);
-      break;
-    case base_16:
-      encode<multibase::base_16>(input, output, multiformat);
-      break;
-    case base_16_upper:
-      encode<multibase::base_16_upper>(input, output, multiformat);
-      break;
-    case base_32:
-      encode<multibase::base_32>(input, output, multiformat);
-      break;
-    case base_32_upper:
-      encode<multibase::base_32_upper>(input, output, multiformat);
-      break;
-    case base_32_pad:
-      encode<multibase::base_32_pad>(input, output, multiformat);
-      break;
-    case base_32_pad_upper:
-      encode<multibase::base_32_pad_upper>(input, output, multiformat);
-      break;
-    case base_32_hex:
-      encode<multibase::base_32_hex>(input, output, multiformat);
-      break;
-    case base_32_hex_upper:
-      encode<multibase::base_32_hex_upper>(input, output, multiformat);
-      break;
-    case base_32_hex_pad:
-      encode<multibase::base_32_hex_pad>(input, output, multiformat);
-      break;
-    case base_32_hex_pad_upper:
-      encode<multibase::base_32_hex_pad_upper>(input, output, multiformat);
-      break;
-    case base_32_z:
-      encode<multibase::base_32_z>(input, output, multiformat);
-      break;
-    case base_36:
-      encode<multibase::base_36>(input, output, multiformat);
-      break;
-    case base_36_upper:
-      encode<multibase::base_36_upper>(input, output, multiformat);
-      break;
-    case base_58_flickr:
-      encode<multibase::base_58_flickr>(input, output, multiformat);
-      break;
-    case base_58_btc:
-      encode<multibase::base_58_btc>(input, output, multiformat);
-      break;
-    case base_64:
-      encode<multibase::base_64>(input, output, multiformat);
-      break;
-    case base_64_pad:
-      encode<multibase::base_64_pad>(input, output, multiformat);
-      break;
-    case base_64_url:
-      encode<multibase::base_64_url>(input, output, multiformat);
-      break;
-    case base_64_url_pad:
-      encode<multibase::base_64_url_pad>(input, output, multiformat);
-      break;
+  auto encoder = codec{base};
+  auto encoded_chunk_size = encoder.encoded_chunk_size();
+  auto decoded_chunk_size = encoder.decoded_chunk_size();
+  if (!encoded_chunk_size || !decoded_chunk_size) {
+    // can't chunk and don't know size of output
+    std::string output_buffer;
+    if constexpr (ranges::sized_range<range>) {
+      output_buffer = encode(input, base, multiformat);
+    } else {
+      using input_type = std::ranges::range_value_t<range>;
+      const std::vector<input_type> input_buffer{std::begin(input),
+                                                 std::end(input)};
+      output_buffer = encode(input_buffer, base, multiformat);
+    }
+    return std::ranges::copy(output_buffer, output).out;
   }
+  if (multiformat) {
+    *output++ = encode(base);
+  }
+  auto chunk_output = std::vector<char>(*encoded_chunk_size);
+  auto chunk_input = std::vector<std::byte>(*decoded_chunk_size);
+  auto first = std::begin(input);
+  auto last = std::end(input);
+  auto first2 = chunk_input.begin();
+  auto last2 = chunk_input.end();
+  while (first != last) {
+    if (first2 != last2) {
+      *first2++ = static_cast<std::byte>(*first++);  // fill chunk_input
+    } else {
+      encoder.encode(chunk_input, chunk_output);
+      std::ranges::copy_if(chunk_output, output,
+                           [](auto val) { return val != 0; });
+      std::ranges::fill(chunk_input, std::byte{0});
+      first2 = chunk_input.begin();
+    }
+  }
+  // process incomplete end chunk
+  auto input_span = std::span{
+      chunk_input.data(),
+      static_cast<std::size_t>(std::distance(chunk_input.begin(), first2))};
+  auto output_span = encoder.encode(input_span, chunk_output);
+  std::ranges::copy(output_span, output);
   return output;
 }
 
-template <typename codec, std::ranges::input_range range,
-          std::output_iterator<char> OutputIt>
-OutputIt encode(const range& input, OutputIt output, bool multiformat) {
-  if (multiformat) {
-    *output++ = static_cast<std::underlying_type_t<multibase::encoding>>(
-        codec::encoding);
+template <std::ranges::input_range range>
+std::vector<std::byte> decode(const range& input) {
+  auto first = input.begin();
+  auto base = decode(static_cast<char>(*first++));
+  return decode(ranges::subrange{first, input.end()}, base);
+}
+
+template <std::ranges::input_range range>
+std::vector<std::byte> decode(const range& input, encoding base) {
+  std::vector<std::byte> buffer;
+  auto decoder = codec{base};
+  if constexpr (ranges::sized_range<range>) {
+    buffer.resize(decoder.decoded_size(input));
+    const auto* data = static_cast<const char*>(input.data());
+    auto size = input.size() * sizeof(std::ranges::range_value_t<range>);
+    auto view = decoder.decode(std::string_view{data, size}, std::span{buffer});
+    std::ranges::copy(view, buffer.begin());
+    buffer.resize(view.size());
+  } else {
+    decoder.decode(input, std::back_inserter(buffer), base);
   }
-  return codec::encode(input, output);
-}
-
-template <std::ranges::input_range range>
-std::vector<unsigned char> decode(const range& input) {
-  std::vector<unsigned char> buffer;
-  auto output = std::back_inserter(buffer);
-  decode(input, output);
   return buffer;
 }
 
-template <std::ranges::input_range range>
-std::vector<unsigned char> decode(const range& input, encoding base) {
-  std::vector<unsigned char> buffer;
-  auto output = std::back_inserter(buffer);
-  decode(input, output, base);
-  return buffer;
-}
-
-template <typename codec, std::ranges::input_range range,
-          std::output_iterator<char> OutputIt>
-OutputIt decode(const range& input, OutputIt output) {
-  return codec::decode(input, output);
-}
-
-template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
+template <std::ranges::input_range range,
+          std::output_iterator<std::byte> OutputIt>
 OutputIt decode(const range& input, OutputIt output) {
   auto first = std::begin(input);
   auto last = std::end(input);
@@ -205,85 +230,64 @@ OutputIt decode(const range& input, OutputIt output) {
   return decode(ranges::subrange(first, last), output, base);
 }
 
-template <std::ranges::input_range range, std::output_iterator<char> OutputIt>
+template <std::ranges::input_range range,
+          std::output_iterator<std::byte> OutputIt>
 OutputIt decode(const range& input, OutputIt output, encoding base) {
-  switch (base) {
-    using enum multibase::encoding;
-    case base_none: {
-      std::ranges::transform(input, output,
-                             [](unsigned char chr) { return chr; });
-      break;
-      case base_2:
-        decode<multibase::base_2>(input, output);
-        break;
-      case base_8:
-        decode<multibase::base_8>(input, output);
-        break;
-      case base_10:
-        decode<multibase::base_10>(input, output);
-        break;
-      case base_16:
-        decode<multibase::base_16>(input, output);
-        break;
-      case base_16_upper:
-        decode<multibase::base_16_upper>(input, output);
-        break;
-      case base_32:
-        decode<multibase::base_32>(input, output);
-        break;
-      case base_32_upper:
-        decode<multibase::base_32_upper>(input, output);
-        break;
-      case base_32_hex:
-        decode<multibase::base_32_hex>(input, output);
-        break;
-      case base_32_hex_pad:
-        decode<multibase::base_32_hex_pad>(input, output);
-        break;
-      case base_32_hex_pad_upper:
-        decode<multibase::base_32_hex_pad_upper>(input, output);
-        break;
-      case base_32_pad:
-        decode<multibase::base_32_pad>(input, output);
-        break;
-      case base_32_pad_upper:
-        decode<multibase::base_32_pad_upper>(input, output);
-        break;
-      case base_32_hex_upper:
-        decode<multibase::base_32_hex_upper>(input, output);
-        break;
-      case base_32_z:
-        decode<multibase::base_32_z>(input, output);
-        break;
-      case base_36:
-        decode<multibase::base_36>(input, output);
-        break;
-      case base_36_upper:
-        decode<multibase::base_36_upper>(input, output);
-        break;
-      case base_58_flickr:
-        decode<multibase::base_58_flickr>(input, output);
-        break;
-      case base_58_btc:
-        decode<multibase::base_58_btc>(input, output);
-        break;
-      case base_64:
-        decode<multibase::base_64>(input, output);
-        break;
-      case base_64_pad:
-        decode<multibase::base_64_pad>(input, output);
-        break;
-      case base_64_url:
-        decode<multibase::base_64_url>(input, output);
-        break;
-      case base_64_url_pad:
-        decode<multibase::base_64_url_pad>(input, output);
-        break;
+  auto decoder = codec{base};
+  auto encoded_chunk_size = decoder.encoded_chunk_size();
+  auto decoded_chunk_size = decoder.decoded_chunk_size();
+  if (!encoded_chunk_size || !decoded_chunk_size) {
+    const std::string input_buffer{std::begin(input), std::end(input)};
+    std::vector<std::byte> output_buffer(decoder.decoded_size(input_buffer),
+                                         std::byte{0});
+    const std::span<std::byte> output_span =
+        decoder.decode(input_buffer, output_buffer);
+    return std::ranges::copy(output_span, output).out;
+  }
+  auto chunk_output = std::vector<std::byte>(*decoded_chunk_size);
+  auto chunk_input = std::vector<char>(*encoded_chunk_size);
+  auto first = std::begin(input);
+  auto last = std::end(input);
+  auto first2 = chunk_input.begin();
+  auto last2 = chunk_input.end();
+  while (first != last) {
+    if (first2 == last2) {
+      decoder.decode(std::string_view{chunk_input.data(), chunk_input.size()},
+                     chunk_output);
+      std::ranges::copy(chunk_output, output);
+      first2 = chunk_input.begin();
+    } else {
+      *first2++ = static_cast<char>(*first++);
     }
   }
+  auto output_view = decoder.decode(
+      std::string_view{
+          chunk_input.data(),
+          static_cast<std::size_t>(std::distance(chunk_input.begin(), first2))},
+      std::span<std::byte>{chunk_output.data(), chunk_output.size()});
+  std::ranges::copy(output_view, output);
   return output;
 }
 
+template <typename impl>
+constexpr void codec::init() {
+  encoded_size_ = &impl::encoded_size;
+  encode_ = &impl::encode;
+  encode_byte_ = &impl::encode;
+  encoded_chunk_size_ = &impl::encoded_chunk_size;
+  decoded_size_ = &impl::decoded_size;
+  decode_ = &impl::decode;
+  decode_byte_ = &impl::decode;
+  decoded_chunk_size_ = &impl::decoded_chunk_size;
+}
+
+template <std::ranges::input_range range>
+std::size_t codec::count_leading_zeros(const range& chunk) {
+  return static_cast<std::size_t>(std::distance(
+      std::begin(chunk), std::ranges::find_if(chunk, [this](auto c) {
+        return this->decode(c) != std::byte{0};
+      })));
+}
 }  // namespace multibase
 
 #endif

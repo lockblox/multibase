@@ -30,6 +30,7 @@
 #include <range/v3/range_fwd.hpp>                // for cardinality
 #include <range/v3/view/subrange.hpp>            // for subrange
 
+#include "multibase/byte_ostream_iterator.hpp"
 #include "multibase/codec.hpp"              // for decode, encode
 #include "multibase/encoding_metadata.hpp"  // for encoding_metadata
 
@@ -77,7 +78,7 @@ int main(int argc, char** argv) {
     if (is_decoder && encoding_option->count() == 1) {
       is_multibase = false;
     }
-    auto metadata = multibase::encoding_metadata::from_name(base_name);
+    auto metadata = multibase::encoding_metadata{base_name};
 
     using istream_iterator = std::istream_iterator<unsigned char>;
     using ostream_iterator = std::ostream_iterator<char>;
@@ -103,7 +104,7 @@ int main(int argc, char** argv) {
 
     std::ranges::for_each(inputs, [&](const auto& istream) {
       auto input = ranges::subrange(istream, istream_iterator{});
-      auto output = ostream_iterator{std::cout};
+      auto output = byte_ostream_iterator{std::cout};
       if (is_decoder) {
         if (is_multibase) {
           multibase::decode(input, output);
@@ -111,7 +112,8 @@ int main(int argc, char** argv) {
           multibase::decode(input, output, metadata.base());
         }
       } else {
-        multibase::encode(input, output, metadata.base(), is_multibase);
+        multibase::encode(input, ostream_iterator{std::cout}, metadata.base(),
+                          is_multibase);
       }
     });
     std::cout << "\n";

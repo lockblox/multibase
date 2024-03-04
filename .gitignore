@@ -34,6 +34,7 @@
 # IDE directories
 .idea
 .vs
+.cache
 build
 cmake-*
 

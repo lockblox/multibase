@@ -9,7 +9,7 @@ if(BUILD_TESTING)
   enable_testing()
   find_package(GTest MODULE REQUIRED)
   add_executable(multibase_test)
-  target_link_libraries(multibase_test PRIVATE libmultibase GTest::gmock_main)
+  target_link_libraries(multibase_test PRIVATE libmultibase GTest::gtest_main GTest::gtest GTest::gmock)
   set_target_properties(multibase_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                                   ${CMAKE_CURRENT_BINARY_DIR})
   target_compile_options(
